@@ -8,6 +8,7 @@ import { brandingApi } from '../api/branding';
 import { isInTelegramWebApp, getTelegramInitData } from '../hooks/useTelegramSDK';
 import { tokenStorage } from '../utils/token';
 import { getSafeRedirectPath } from '../utils/safeRedirect';
+import { getApiErrorMessage } from '../utils/api-error';
 import { CheckIcon, XIcon, ExclamationIcon } from '@/components/icons';
 
 const MAX_RETRY_ATTEMPTS = 3;
@@ -86,8 +87,12 @@ export default function TelegramRedirect() {
         schedule(() => navigate(redirectTo), 800);
       } catch (err: unknown) {
         console.error('Telegram auth failed:', err);
-        const error = err as { response?: { data?: { detail?: string } } };
-        setErrorMessage(error.response?.data?.detail || t('auth.telegramRequired'));
+        const error = err as { response?: { status?: number } };
+        if (error.response?.status === 428) {
+          navigate('/login', { replace: true });
+          return;
+        }
+        setErrorMessage(getApiErrorMessage(err, t('auth.telegramRequired')));
         setStatus('error');
       }
     };

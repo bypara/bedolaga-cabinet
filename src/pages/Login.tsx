@@ -83,6 +83,8 @@ export default function Login() {
     retry: false,
   });
   const consentDocuments = useMemo(() => legalConsent?.documents ?? [], [legalConsent]);
+  const [requiredConsentDocuments, setRequiredConsentDocuments] = useState<string[] | null>(null);
+  const visibleConsentDocuments = requiredConsentDocuments ?? consentDocuments;
   const [acceptedDocuments, setAcceptedDocuments] = useState<Record<string, boolean>>({});
   // Telegram-вход происходит сам собой, поэтому чекбоксы показываем только когда
   // бэк ответил 428: пользователь новый и без согласия аккаунт не создастся.
@@ -103,11 +105,12 @@ export default function Login() {
   }, [legalConsent?.prechecked, consentDocuments]);
 
   const acceptedDocumentKeys = useMemo(
-    () => consentDocuments.filter((document) => acceptedDocuments[document]),
-    [consentDocuments, acceptedDocuments],
+    () => visibleConsentDocuments.filter((document) => acceptedDocuments[document]),
+    [visibleConsentDocuments, acceptedDocuments],
   );
   const allDocumentsAccepted =
-    consentDocuments.length === 0 || acceptedDocumentKeys.length === consentDocuments.length;
+    visibleConsentDocuments.length > 0 &&
+    acceptedDocumentKeys.length === visibleConsentDocuments.length;
 
   const toggleDocument = useCallback((document: string, value: boolean) => {
     setAcceptedDocuments((prev) => ({ ...prev, [document]: value }));
@@ -124,6 +127,7 @@ export default function Login() {
         | undefined;
       if (detail?.documents?.length) {
         const documents = detail.documents;
+        setRequiredConsentDocuments(documents);
         setAcceptedDocuments((prev) => {
           const next = { ...prev };
           for (const document of documents) {
@@ -488,7 +492,7 @@ export default function Login() {
             </p>
 
             <LegalConsent
-              documents={consentDocuments}
+              documents={visibleConsentDocuments}
               accepted={acceptedDocuments}
               onChange={toggleDocument}
               disabled={isLoading}
@@ -510,6 +514,7 @@ export default function Login() {
                 try {
                   await pendingConsentRetry(acceptedDocumentKeys);
                   setPendingConsentRetry(null);
+                  setRequiredConsentDocuments(null);
                 } catch (err) {
                   setError(getApiErrorMessage(err, t('common.error')));
                 } finally {
@@ -587,7 +592,10 @@ export default function Login() {
                   </p>
                 </div>
               ) : (
-                <TelegramLoginButton referralCode={referralCode || undefined} />
+                <TelegramLoginButton
+                  referralCode={referralCode || undefined}
+                  onConsentRequired={captureConsentRequirement}
+                />
               )}
             </div>
 

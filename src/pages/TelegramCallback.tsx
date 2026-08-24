@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../store/auth';
+import { getApiErrorMessage } from '../utils/api-error';
 
 export default function TelegramCallback() {
   const { t } = useTranslation();
@@ -54,8 +55,12 @@ export default function TelegramCallback() {
         });
         navigate('/');
       } catch (err: unknown) {
-        const error = err as { response?: { data?: { detail?: string } } };
-        setError(error.response?.data?.detail || t('common.error'));
+        const error = err as { response?: { status?: number } };
+        if (error.response?.status === 428) {
+          navigate('/login', { replace: true });
+          return;
+        }
+        setError(getApiErrorMessage(err, t('common.error')));
       }
     };
 

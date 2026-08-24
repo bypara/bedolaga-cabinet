@@ -9,16 +9,23 @@ import { useAuthStore } from '../store/auth';
 import { useNavigate } from 'react-router';
 import { getPendingCampaignSlug } from '../utils/campaign';
 import { copyToClipboard } from '../utils/clipboard';
-import { isEndpointMissingError } from '../utils/api-error';
+import { getApiErrorMessage, isEndpointMissingError } from '../utils/api-error';
 
 interface TelegramLoginButtonProps {
   referralCode?: string;
+  onConsentRequired?: (
+    error: unknown,
+    retry: (acceptedDocuments: string[]) => Promise<void>,
+  ) => boolean;
 }
 
 const SCRIPT_LOAD_TIMEOUT_MS = 2000;
 const DEEPLINK_POLL_INTERVAL_MS = 2500;
 
-export default function TelegramLoginButton({ referralCode }: TelegramLoginButtonProps) {
+export default function TelegramLoginButton({
+  referralCode,
+  onConsentRequired,
+}: TelegramLoginButtonProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -94,11 +101,15 @@ export default function TelegramLoginButton({ referralCode }: TelegramLoginButto
       if (mountedRef.current) navigate('/');
     } catch (err: unknown) {
       if (!mountedRef.current) return;
-      let message = t('common.error');
-      if (isAxiosError(err) && err.response?.data?.detail) {
-        message = err.response.data.detail;
+      const consentCaptured = onConsentRequired?.(err, async (acceptedDocuments) => {
+        await loginWithTelegramOIDC(data.id_token as string, acceptedDocuments);
+        navigate('/');
+      });
+      if (consentCaptured) {
+        setOidcError('');
+        return;
       }
-      setOidcError(message);
+      setOidcError(getApiErrorMessage(err, t('common.error')));
     } finally {
       if (mountedRef.current) setOidcLoading(false);
     }
@@ -188,19 +199,26 @@ export default function TelegramLoginButton({ referralCode }: TelegramLoginButto
     (window as unknown as Record<string, unknown>)[callbackName] = async (
       user: Record<string, unknown>,
     ) => {
+      const authData = {
+        id: user.id as number,
+        first_name: user.first_name as string,
+        last_name: (user.last_name as string) || undefined,
+        username: (user.username as string) || undefined,
+        photo_url: (user.photo_url as string) || undefined,
+        auth_date: user.auth_date as number,
+        hash: user.hash as string,
+      };
       try {
-        await loginWithTelegramWidget({
-          id: user.id as number,
-          first_name: user.first_name as string,
-          last_name: (user.last_name as string) || undefined,
-          username: (user.username as string) || undefined,
-          photo_url: (user.photo_url as string) || undefined,
-          auth_date: user.auth_date as number,
-          hash: user.hash as string,
-        });
+        await loginWithTelegramWidget(authData);
         navigate('/');
-      } catch {
-        // Error handled by auth store
+      } catch (err: unknown) {
+        const consentCaptured = onConsentRequired?.(err, async (acceptedDocuments) => {
+          await loginWithTelegramWidget(authData, acceptedDocuments);
+          navigate('/');
+        });
+        if (!consentCaptured) {
+          setOidcError(getApiErrorMessage(err, t('common.error')));
+        }
       }
     };
 
@@ -246,6 +264,8 @@ export default function TelegramLoginButton({ referralCode }: TelegramLoginButto
     loginWithTelegramWidget,
     navigate,
     handleScriptFailed,
+    onConsentRequired,
+    t,
   ]);
 
   // Deep link auth: request token and start polling with recursive setTimeout

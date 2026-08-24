@@ -1,16 +1,39 @@
 import { Fragment } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { infoApi, type InfoVisibility } from '../api/info';
+import { isConfiguredLegalDocument } from './legalFooterState';
 
 interface LegalLink {
   href: string;
   labelKey: string;
   fallback: string;
+  visibilityKey: keyof Pick<InfoVisibility, 'offer' | 'privacy' | 'recurrent'>;
+  fetch: () => Promise<{ content: string; updated_at: string | null }>;
 }
 
 const LINKS: LegalLink[] = [
-  { href: '/offer', labelKey: 'footer.offer', fallback: 'Публичная оферта' },
-  { href: '/privacy', labelKey: 'footer.privacy', fallback: 'Политика конфиденциальности' },
-  { href: '/recurrent-payments', labelKey: 'footer.recurrent', fallback: 'Рекуррентные платежи' },
+  {
+    href: '/offer',
+    labelKey: 'footer.offer',
+    fallback: 'Публичная оферта',
+    visibilityKey: 'offer',
+    fetch: infoApi.getPublicOffer,
+  },
+  {
+    href: '/privacy',
+    labelKey: 'footer.privacy',
+    fallback: 'Политика конфиденциальности',
+    visibilityKey: 'privacy',
+    fetch: infoApi.getPrivacyPolicy,
+  },
+  {
+    href: '/recurrent-payments',
+    labelKey: 'footer.recurrent',
+    fallback: 'Рекуррентные платежи',
+    visibilityKey: 'recurrent',
+    fetch: infoApi.getRecurrentPayments,
+  },
 ];
 
 interface LegalFooterProps {
@@ -19,12 +42,29 @@ interface LegalFooterProps {
 
 export default function LegalFooter({ className = '' }: LegalFooterProps) {
   const { t } = useTranslation();
+  const { data: visibleLinks = [] } = useQuery({
+    queryKey: ['legal-footer-links'],
+    queryFn: async () => {
+      const [visibility, documents] = await Promise.all([
+        infoApi.getVisibility(),
+        Promise.allSettled(LINKS.map((link) => link.fetch())),
+      ]);
+
+      return LINKS.filter((link, index) =>
+        isConfiguredLegalDocument(visibility[link.visibilityKey], documents[index]),
+      );
+    },
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+
+  if (visibleLinks.length === 0) return null;
 
   return (
     <footer
       className={`flex flex-wrap items-center justify-center gap-x-2.5 gap-y-1 text-center text-[11px] leading-relaxed text-dark-500 ${className}`}
     >
-      {LINKS.map((link, index) => (
+      {visibleLinks.map((link, index) => (
         <Fragment key={link.href}>
           {index > 0 && (
             <span className="text-dark-700" aria-hidden="true">

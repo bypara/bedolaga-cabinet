@@ -19,6 +19,7 @@ import { ChatIcon, CloseIcon, ImageIcon, PlusIcon, SendIcon } from '@/components
 import { usePlatform } from '@/platform';
 import { linkifyText } from '../utils/linkify';
 import { resolveSupportContact } from '../utils/supportContact';
+import { WebBackButton } from '../components/WebBackButton';
 
 const log = logger.createLogger('Support');
 
@@ -67,6 +68,7 @@ export default function Support() {
   const [replyAttachments, setReplyAttachments] = useState<MediaAttachment[]>([]);
   const createFileInputRef = useRef<HTMLInputElement>(null);
   const replyFileInputRef = useRef<HTMLInputElement>(null);
+  const createFormSectionRef = useRef<HTMLDivElement>(null);
 
   const blobUrlsRef = useRef<Set<string>>(new Set());
 
@@ -76,6 +78,19 @@ export default function Support() {
       urls.current.forEach((u) => URL.revokeObjectURL(u));
     };
   }, []);
+
+  useEffect(() => {
+    if (!showCreateForm || !window.matchMedia('(max-width: 1023px)').matches) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      createFormSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [showCreateForm]);
 
   const clearCreateAttachments = () => {
     createAttachments.forEach((a) => {
@@ -269,12 +284,18 @@ export default function Support() {
     const supportMessage = getSupportMessage();
 
     return (
-      <div className="mx-auto mt-12 max-w-md">
-        <Card className="text-center">
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+          <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('support.title')}</h1>
+        </div>
+        <Card className="mx-auto mt-12 max-w-md text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-dark-800">
             <ChatIcon className="h-8 w-8 text-dark-400" />
           </div>
-          <h2 className="mb-2 text-xl font-semibold text-dark-100">{supportMessage.title}</h2>
+          {supportMessage.title !== t('support.title') && (
+            <h2 className="mb-2 text-xl font-semibold text-dark-100">{supportMessage.title}</h2>
+          )}
           <p className="mb-6 text-dark-400">{supportMessage.message}</p>
           {contact && (
             <Button onClick={() => openSupportContact(supportConfig)} fullWidth>
@@ -343,7 +364,10 @@ export default function Support() {
         variants={staggerItem}
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('support.title')}</h1>
+        <div className="flex items-center gap-3">
+          <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+          <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('support.title')}</h1>
+        </div>
         <Button
           onClick={() => {
             setShowCreateForm(true);
@@ -434,7 +458,7 @@ export default function Support() {
         </Card>
 
         {/* Ticket Detail / Create Form */}
-        <Card className="lg:col-span-2">
+        <Card ref={createFormSectionRef} className="scroll-mt-24 lg:col-span-2">
           {showCreateForm ? (
             <div>
               <h2 className="mb-6 text-lg font-semibold text-dark-100">

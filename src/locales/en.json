@@ -56,6 +56,7 @@
     "navigation": "Navigation"
   },
   "notifications": {
+    "title": "Notifications",
     "ticketNotifications": "Ticket Notifications",
     "markAllRead": "Mark all read",
     "noNotifications": "No notifications",
@@ -193,6 +194,7 @@
     "resetPassword": "Reset password",
     "loginWithTelegram": "Login with Telegram",
     "loginWithEmail": "Login with Email",
+    "emailAuthDescription": "Sign in or register with email",
     "noAccount": "Don't have an account?",
     "hasAccount": "Already have an account?",
     "or": "or",
@@ -268,6 +270,12 @@
     "tokenExpiredOrInvalid": "This password reset link is invalid or has expired."
   },
   "dashboard": {
+    "emailReminder": {
+      "title": "Add an email for sign-in",
+      "description": "You can access your account even when Telegram is temporarily unavailable.",
+      "action": "Add email",
+      "later": "Later"
+    },
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}!",
     "welcomeNoName": "Welcome!",

@@ -70,7 +70,9 @@ export default function Login() {
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   const [forgotPasswordError, setForgotPasswordError] = useState('');
-  const [showEmailForm, setShowEmailForm] = useState(true);
+  // Keep the primary screen focused on the fastest sign-in method. A referral
+  // opens registration immediately because that is the user's explicit intent.
+  const [showEmailForm, setShowEmailForm] = useState(Boolean(referralCode));
 
   // Гейт согласия с офертой/политикой для НОВОГО пользователя. Конфиг публичный:
   // нужен до авторизации, чтобы нарисовать чекбоксы ещё на экране входа.
@@ -474,7 +476,7 @@ export default function Login() {
 
         {/* Экран согласия: бэк ответил 428 на автоматический Telegram-вход */}
         {pendingConsentRetry ? (
-          <div className="card">
+          <div className="card p-5 sm:p-6">
             <h2 className="mb-2 text-lg font-bold text-dark-50">
               {t('auth.legalConsentTitle', 'Ещё один шаг')}
             </h2>
@@ -551,7 +553,7 @@ export default function Login() {
           </div>
         ) : (
           /* Main auth card */
-          <div className="card">
+          <div className="card p-5 sm:p-6">
             {error && (
               <div
                 role="alert"
@@ -589,7 +591,7 @@ export default function Login() {
               )}
             </div>
 
-            {/* OAuth providers - compact icon row */}
+            {/* OAuth providers */}
             {oauthProviders.length > 0 && (
               <>
                 <div className="my-4 flex items-center gap-3">
@@ -597,24 +599,21 @@ export default function Login() {
                   <span className="text-xs text-dark-500">{t('auth.or', 'or')}</span>
                   <div className="h-px flex-1 bg-dark-700" />
                 </div>
-                <div className="flex items-stretch gap-2">
+                <div className="space-y-2.5">
                   {oauthProviders.map((provider) => (
                     <button
                       key={provider.name}
                       type="button"
                       onClick={() => handleOAuthLogin(provider.name)}
                       disabled={oauthLoading !== null}
-                      className="flex flex-1 flex-col items-center justify-center gap-1.5 rounded-xl border border-dark-700 bg-dark-800/80 py-2.5 transition-all hover:border-dark-600 hover:bg-dark-700 disabled:opacity-50"
-                      title={provider.display_name}
+                      className="flex min-h-12 w-full items-center justify-center gap-2.5 rounded-xl border border-dark-700 bg-dark-800/70 px-4 py-3 text-sm font-medium text-dark-200 transition-colors hover:border-dark-600 hover:bg-dark-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {oauthLoading === provider.name ? (
                         <span className="h-5 w-5 animate-spin rounded-full border-2 border-dark-400 border-t-white" />
                       ) : (
                         <OAuthProviderIcon provider={provider.name} className="h-5 w-5" />
                       )}
-                      <span className="text-[10px] leading-none text-dark-500">
-                        {provider.display_name}
-                      </span>
+                      <span>{provider.display_name}</span>
                     </button>
                   ))}
                 </div>
@@ -624,31 +623,41 @@ export default function Login() {
             {/* Email auth section - collapsible */}
             {isEmailAuthEnabled && (
               <>
-                <div className="my-4 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-dark-700" />
+                <div className="mt-4 border-t border-dark-700/80 pt-4">
                   <button
                     type="button"
                     onClick={() => setShowEmailForm(!showEmailForm)}
-                    className="flex items-center gap-1.5 rounded-full border border-dark-700 bg-dark-800/60 px-3.5 py-1.5 text-xs font-medium text-dark-300 transition-all hover:border-dark-600 hover:bg-dark-700 hover:text-dark-200"
+                    aria-expanded={showEmailForm}
+                    aria-controls="email-auth-form"
+                    className="group flex min-h-14 w-full items-center gap-3 rounded-xl border border-dark-700 bg-dark-800/55 px-3.5 py-2.5 text-left transition-colors hover:border-dark-600 hover:bg-dark-800"
                   >
-                    <EmailIcon className="h-3.5 w-3.5 text-dark-400" />
-                    <span>{t('auth.loginWithEmail')}</span>
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-lg bg-dark-700/70 text-dark-300 transition-colors group-hover:bg-dark-700 group-hover:text-dark-100">
+                      <EmailIcon className="h-4.5 w-4.5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-dark-100">
+                        {t('auth.loginWithEmail')}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-dark-500">
+                        {t('auth.emailAuthDescription', 'Sign in or register with email')}
+                      </span>
+                    </span>
                     <ChevronDownIcon
-                      className={`h-3 w-3 text-dark-400 transition-transform duration-300 ${showEmailForm ? 'rotate-180' : ''}`}
+                      className={`h-4 w-4 flex-none text-dark-500 transition-transform duration-300 ${showEmailForm ? 'rotate-180' : ''}`}
                     />
                   </button>
-                  <div className="h-px flex-1 bg-dark-700" />
                 </div>
 
                 {/* Collapsible email form */}
                 <div
+                  id="email-auth-form"
                   className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
                     showEmailForm ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
                   }`}
                   style={{ transform: 'translateZ(0)' }}
                 >
                   <div className="overflow-hidden">
-                    <div className="space-y-4 pb-1 pt-1">
+                    <div className="space-y-4 pb-1 pt-4">
                       {showForgotPassword ? (
                         /* Forgot password screen - replaces login/register */
                         forgotPasswordSent ? (

@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import { usePlatform } from '../platform';
 import { BackIcon } from './icons';
 
@@ -14,6 +15,7 @@ interface WebBackButtonProps {
  */
 export function WebBackButton({ to, replace, className }: WebBackButtonProps) {
   const { platform } = usePlatform();
+  const { t } = useTranslation();
 
   if (platform === 'telegram') return null;
 
@@ -21,6 +23,8 @@ export function WebBackButton({ to, replace, className }: WebBackButtonProps) {
     <Link
       to={to}
       replace={replace}
+      aria-label={t('common.back')}
+      title={t('common.back')}
       className={
         className ||
         'flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600'

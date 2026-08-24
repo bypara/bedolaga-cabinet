@@ -3,19 +3,26 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ticketNotificationsApi } from '../api/ticketNotifications';
+import { newsApi } from '../api/news';
 import { useAuthStore } from '../store/auth';
 import { useToast } from './Toast';
-import { useWebSocket, WSMessage } from '../hooks/useWebSocket';
+import { useWebSocket, type WSMessage } from '../hooks/useWebSocket';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import type { TicketNotification } from '../types';
-import { BellIcon, CheckIcon } from '@/components/icons';
+import { BellIcon, CheckIcon, InfoIcon } from '@/components/icons';
 
 interface TicketNotificationBellProps {
   isAdmin?: boolean;
+  sidebar?: boolean;
+  expanded?: boolean;
 }
 
-export default function TicketNotificationBell({ isAdmin = false }: TicketNotificationBellProps) {
-  const { t } = useTranslation();
+export default function TicketNotificationBell({
+  isAdmin = false,
+  sidebar = false,
+  expanded = false,
+}: TicketNotificationBellProps) {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -132,6 +139,15 @@ export default function TicketNotificationBell({ isAdmin = false }: TicketNotifi
     staleTime: 5000,
   });
 
+  // News have no read/unread state in the backend. Show the latest articles in
+  // the same inbox, while keeping the badge reserved for actual unread replies.
+  const { data: newsData, isLoading: isNewsLoading } = useQuery({
+    queryKey: ['notification-news-preview'],
+    queryFn: () => newsApi.getNews({ limit: 3, offset: 0 }),
+    enabled: isAuthenticated && isOpen,
+    staleTime: 1000 * 60 * 5,
+  });
+
   // Mark all as read mutation
   const markAllReadMutation = useMutation({
     mutationFn: isAdmin
@@ -217,18 +233,31 @@ export default function TicketNotificationBell({ isAdmin = false }: TicketNotifi
   const unreadCount = unreadData?.unread_count || 0;
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className={sidebar ? 'relative w-full' : 'relative'} ref={dropdownRef}>
       {/* Bell button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`relative rounded-xl border p-2 transition-all duration-200 ${
+        className={`relative flex items-center rounded-xl transition-all duration-200 ${
+          sidebar
+            ? `h-11 w-full ${expanded ? 'justify-start gap-3 px-3' : 'justify-center px-0'}`
+            : 'border p-2'
+        } ${
           isOpen
-            ? 'border-dark-600 bg-dark-700 text-accent-400'
-            : 'border-dark-700/50 bg-dark-800/50 text-dark-400 hover:bg-dark-700 hover:text-accent-400'
+            ? sidebar
+              ? 'bg-dark-800 text-accent-400'
+              : 'border-dark-600 bg-dark-700 text-accent-400'
+            : sidebar
+              ? 'text-dark-400 hover:bg-dark-800 hover:text-dark-100'
+              : 'border-dark-700/50 bg-dark-800/50 text-dark-400 hover:bg-dark-700 hover:text-accent-400'
         }`}
-        title={t('notifications.ticketNotifications', 'Ticket notifications')}
+        title={t('notifications.title', 'Notifications')}
       >
         <BellIcon />
+        {sidebar && expanded && (
+          <span className="truncate text-sm font-medium">
+            {t('notifications.title', 'Уведомления')}
+          </span>
+        )}
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] animate-scale-in-bounce items-center justify-center rounded-full bg-error-500 px-1 text-xs font-bold text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -239,13 +268,17 @@ export default function TicketNotificationBell({ isAdmin = false }: TicketNotifi
       {/* Dropdown */}
       {isOpen && (
         <div
-          className="fixed left-4 right-4 z-50 mt-0 w-auto animate-scale-in overflow-hidden rounded-2xl border border-dark-700/50 bg-dark-900/95 shadow-2xl shadow-black/30 backdrop-blur-xl sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96"
+          className={
+            sidebar
+              ? 'absolute bottom-0 left-full z-50 ml-3 w-96 animate-scale-in overflow-hidden rounded-2xl border border-dark-700/50 bg-dark-900/95 shadow-2xl shadow-black/30 backdrop-blur-xl'
+              : 'fixed left-4 right-4 z-50 mt-0 w-auto animate-scale-in overflow-hidden rounded-2xl border border-dark-700/50 bg-dark-900/95 shadow-2xl shadow-black/30 backdrop-blur-xl sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96'
+          }
           style={isMobileFullscreen ? { top: dropdownTop } : undefined}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-dark-700/50 bg-dark-800/30 px-4 py-3">
             <h3 className="text-sm font-semibold text-dark-100">
-              {t('notifications.ticketNotifications', 'Ticket Notifications')}
+              {t('notifications.title', 'Notifications')}
             </h3>
             {unreadCount > 0 && (
               <button
@@ -261,6 +294,9 @@ export default function TicketNotificationBell({ isAdmin = false }: TicketNotifi
 
           {/* Notifications list */}
           <div className="max-h-80 overflow-y-auto">
+            <div className="border-b border-dark-800/50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-dark-500">
+              {t('nav.support')}
+            </div>
             {isLoading ? (
               <div className="p-8 text-center text-dark-500">
                 <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-accent-500 border-t-transparent"></div>
@@ -304,6 +340,44 @@ export default function TicketNotificationBell({ isAdmin = false }: TicketNotifi
                 <p className="text-sm text-dark-500">
                   {t('notifications.noNotifications', 'No notifications')}
                 </p>
+              </div>
+            )}
+
+            {(isNewsLoading || (newsData?.items && newsData.items.length > 0)) && (
+              <div className="border-t border-dark-700/50">
+                <div className="border-b border-dark-800/50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-dark-500">
+                  {t('news.title')}
+                </div>
+                {isNewsLoading ? (
+                  <div className="p-6 text-center text-dark-500">
+                    <div className="mx-auto h-5 w-5 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
+                  </div>
+                ) : (
+                  newsData?.items.map((article) => (
+                    <button
+                      key={article.id}
+                      onClick={() => {
+                        setIsOpen(false);
+                        navigate(`/news/${article.slug}`);
+                      }}
+                      className="flex w-full gap-3 border-b border-dark-800/50 px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-dark-800/50"
+                    >
+                      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl bg-accent-500/10 text-accent-400">
+                        <InfoIcon className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-dark-100">
+                          {article.title}
+                        </span>
+                        {article.published_at && (
+                          <span className="mt-1 block text-xs text-dark-500">
+                            {new Date(article.published_at).toLocaleDateString(i18n.language)}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  ))
+                )}
               </div>
             )}
           </div>

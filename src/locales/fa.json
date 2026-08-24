@@ -56,6 +56,7 @@
     "navigation": "ناوبری"
   },
   "notifications": {
+    "title": "اعلان‌ها",
     "ticketNotifications": "اعلان‌های تیکت",
     "markAllRead": "خواندن همه",
     "noNotifications": "اعلانی وجود ندارد",
@@ -185,6 +186,7 @@
     "resetPassword": "بازنشانی رمز عبور",
     "loginWithTelegram": "ورود با تلگرام",
     "loginWithEmail": "ورود با ایمیل",
+    "emailAuthDescription": "ورود یا ثبت‌نام با ایمیل",
     "noAccount": "حساب کاربری ندارید؟",
     "hasAccount": "قبلاً حساب دارید؟",
     "or": "یا",
@@ -253,6 +255,12 @@
     "goToLogin": "رفتن به صفحه ورود"
   },
   "dashboard": {
+    "emailReminder": {
+      "title": "افزودن ایمیل برای ورود",
+      "description": "حتی اگر تلگرام موقتاً در دسترس نباشد، می‌توانید وارد حساب شوید.",
+      "action": "افزودن ایمیل",
+      "later": "بعداً"
+    },
     "title": "داشبورد",
     "welcome": "خوش آمدید، {{name}}!",
     "welcomeNoName": "خوش آمدید!",

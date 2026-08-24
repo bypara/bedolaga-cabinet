@@ -56,6 +56,7 @@
     "navigation": "导航"
   },
   "notifications": {
+    "title": "通知",
     "ticketNotifications": "工单通知",
     "markAllRead": "全部标记已读",
     "noNotifications": "暂无通知",
@@ -185,6 +186,7 @@
     "resetPassword": "重置密码",
     "loginWithTelegram": "通过Telegram登录",
     "loginWithEmail": "通过邮箱登录",
+    "emailAuthDescription": "使用邮箱登录或注册",
     "noAccount": "没有账户？",
     "hasAccount": "已有账户？",
     "or": "或",
@@ -253,6 +255,12 @@
     "goToLogin": "前往登录"
   },
   "dashboard": {
+    "emailReminder": {
+      "title": "添加邮箱用于登录",
+      "description": "即使 Telegram 暂时不可用，您仍可访问账户。",
+      "action": "添加邮箱",
+      "later": "稍后"
+    },
     "title": "个人中心",
     "welcome": "欢迎，{{name}}！",
     "welcomeNoName": "欢迎！",

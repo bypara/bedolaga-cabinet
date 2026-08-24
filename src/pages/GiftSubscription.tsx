@@ -455,6 +455,12 @@ function BuyTabContent({
   const currentPrice = selectedPeriod?.price_kopeks ?? 0;
 
   const insufficientBalance = paymentMode === 'balance' && config.balance_kopeks < currentPrice;
+  const missingBalanceKopeks = Math.max(0, currentPrice - config.balance_kopeks);
+  const topUpParams = new URLSearchParams({
+    amount: String(Math.ceil(missingBalanceKopeks / 100)),
+    returnTo: '/gift',
+  });
+  const topUpBalanceUrl = `/balance/top-up?${topUpParams.toString()}`;
 
   // Validation
   const canSubmit = useMemo(() => {
@@ -677,37 +683,25 @@ function BuyTabContent({
 
       {/* Summary / Balance info */}
       {paymentMode === 'balance' && (
-        <div className="rounded-2xl border border-dark-800/50 bg-dark-900/50 p-4">
+        <div className="rounded-2xl border border-dark-800/50 bg-dark-900/50 px-4 py-3.5">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-dark-400">{t('gift.yourBalance')}</span>
-            <span className="text-sm font-semibold text-dark-200">
-              {formatPrice(config.balance_kopeks)}
-            </span>
+            <div>
+              <span className="text-xs text-dark-500">{t('gift.yourBalance')}</span>
+              <p className="mt-0.5 text-base font-semibold text-dark-100">
+                {formatPrice(config.balance_kopeks)}
+              </p>
+            </div>
+            {insufficientBalance && (
+              <div className="text-right">
+                <span className="text-xs text-dark-500">{t('balance.missing')}</span>
+                <p className="mt-0.5 text-sm font-medium text-warning-300">
+                  {formatPrice(missingBalanceKopeks)}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
-
-      {/* Insufficient balance warning */}
-      <AnimatePresence>
-        {insufficientBalance && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="rounded-xl border border-warning-500/20 bg-warning-500/5 p-3"
-          >
-            <p className="text-sm text-warning-400">
-              {t('gift.insufficientBalance')}{' '}
-              <Link
-                to="/balance"
-                className="font-medium text-accent-400 underline underline-offset-2"
-              >
-                {t('gift.topUpBalance')}
-              </Link>
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Error */}
       <AnimatePresence>
@@ -724,25 +718,34 @@ function BuyTabContent({
       </AnimatePresence>
 
       {/* Submit button */}
-      <button
-        type="button"
-        onClick={handleSubmit}
-        disabled={!canSubmit || purchaseMutation.isPending}
-        className={cn(
-          'flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-semibold transition-all duration-200',
-          canSubmit && !purchaseMutation.isPending
-            ? 'bg-accent-500 text-on-accent shadow-lg shadow-accent-500/25 hover:bg-accent-400 hover:shadow-accent-500/40 active:scale-[0.98]'
-            : 'cursor-not-allowed bg-dark-800 text-dark-500',
-        )}
-      >
-        {purchaseMutation.isPending ? (
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-        ) : (
-          <>
-            {t('gift.giftButton')} {currentPrice > 0 ? formatPrice(currentPrice) : ''}
-          </>
-        )}
-      </button>
+      {insufficientBalance ? (
+        <Link
+          to={topUpBalanceUrl}
+          className="flex w-full items-center justify-center rounded-2xl bg-accent-500 px-6 py-4 text-base font-semibold text-on-accent shadow-lg shadow-accent-500/20 transition-all duration-200 hover:bg-accent-400 hover:shadow-accent-500/30 active:scale-[0.98]"
+        >
+          {t('gift.topUpBalance')}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!canSubmit || purchaseMutation.isPending}
+          className={cn(
+            'flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-semibold transition-all duration-200',
+            canSubmit && !purchaseMutation.isPending
+              ? 'bg-accent-500 text-on-accent shadow-lg shadow-accent-500/25 hover:bg-accent-400 hover:shadow-accent-500/40 active:scale-[0.98]'
+              : 'cursor-not-allowed bg-dark-800 text-dark-500',
+          )}
+        >
+          {purchaseMutation.isPending ? (
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+          ) : (
+            <>
+              {t('gift.giftButton')} {currentPrice > 0 ? formatPrice(currentPrice) : ''}
+            </>
+          )}
+        </button>
+      )}
     </div>
   );
 }

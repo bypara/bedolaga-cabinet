@@ -4,7 +4,6 @@ import { Trans, useTranslation } from 'react-i18next';
 import { infoApi } from '../api/info';
 import { subscriptionApi } from '../api/subscription';
 import PageLoader from './common/PageLoader';
-import LegalFooter from './LegalFooter';
 import { getApiErrorMessage } from '../utils/api-error';
 import { CheckIcon, ShieldIcon, SparklesIcon } from '@/components/icons';
 
@@ -128,7 +127,7 @@ export default function LegalOnboardingGate({ children }: LegalOnboardingGatePro
   const canSubmit = (checked || consentSaved) && !isPending;
 
   return (
-    <div className="flex min-h-[100dvh] flex-col px-4 py-6 sm:justify-center sm:py-10">
+    <div className="flex min-h-[100dvh] flex-col justify-center px-4 py-6 sm:py-10">
       <main className="mx-auto w-full max-w-lg">
         <div className="card overflow-hidden p-0">
           <div className="border-b border-dark-700/70 bg-dark-900/50 px-5 py-6 text-center sm:px-8 sm:py-8">
@@ -158,7 +157,7 @@ export default function LegalOnboardingGate({ children }: LegalOnboardingGatePro
           <div className="space-y-5 px-5 py-5 sm:px-8 sm:py-7">
             {trialAvailable && trial && (
               <section className="rounded-2xl border border-accent-500/20 bg-accent-500/[0.06] p-4">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="font-semibold text-dark-100">
                       {trial.requires_payment
@@ -174,7 +173,7 @@ export default function LegalOnboardingGate({ children }: LegalOnboardingGatePro
                         : t('legalOnboarding.freeTrialPrice', 'Без оплаты и обязательств')}
                     </p>
                   </div>
-                  <span className="rounded-full bg-accent-500/15 px-3 py-1 text-xs font-semibold text-accent-400">
+                  <span className="shrink-0 whitespace-nowrap rounded-full bg-accent-500/15 px-3 py-1 text-xs font-semibold text-accent-400">
                     {t('legalOnboarding.days', {
                       count: trial.duration_days,
                       defaultValue: '{{count}} дн.',
@@ -182,13 +181,13 @@ export default function LegalOnboardingGate({ children }: LegalOnboardingGatePro
                   </span>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                  <div className="rounded-xl bg-dark-900/60 px-3 py-2.5 text-dark-300">
+                  <div className="rounded-xl bg-dark-900/60 px-3 py-2.5 text-center text-dark-300 sm:text-left">
                     <span className="font-semibold text-dark-100">
                       {trial.traffic_limit_gb === 0 ? '∞' : trial.traffic_limit_gb}
                     </span>{' '}
                     {t('common.units.gb')}
                   </div>
-                  <div className="rounded-xl bg-dark-900/60 px-3 py-2.5 text-dark-300">
+                  <div className="rounded-xl bg-dark-900/60 px-3 py-2.5 text-center text-dark-300 sm:text-left">
                     <span className="font-semibold text-dark-100">
                       {trial.device_limit === 0 ? '∞' : trial.device_limit}
                     </span>{' '}
@@ -290,7 +289,6 @@ export default function LegalOnboardingGate({ children }: LegalOnboardingGatePro
           </div>
         </div>
       </main>
-      <LegalFooter />
     </div>
   );
 }

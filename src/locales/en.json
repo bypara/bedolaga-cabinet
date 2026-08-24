@@ -1730,7 +1730,7 @@
       "disabled": "Off",
       "notConfigured": "Not configured",
       "dragToReorder": "Drag to reorder",
-      "dragHint": "Drag cards to change order. Click to configure.",
+      "dragHint": "Drag cards to reorder them for users. Click a card to configure it.",
       "saveOrder": "Save Order",
       "orderSaved": "Order saved",
       "saved": "Settings saved",

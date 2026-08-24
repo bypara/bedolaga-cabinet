@@ -231,7 +231,10 @@ export default function Referral() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+          <WebBackButton
+            to="/"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+          />
           <h1 className="text-xl font-bold text-dark-50 sm:text-2xl">{t('referral.title')}</h1>
         </div>
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-6">
@@ -253,7 +256,10 @@ export default function Referral() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+        <WebBackButton
+          to="/"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+        />
         <h1 className="text-xl font-bold text-dark-50 sm:text-2xl">{t('referral.title')}</h1>
       </div>
 
@@ -644,14 +650,14 @@ export default function Referral() {
 
           {/* Withdrawal History */}
           {withdrawalHistory?.items && withdrawalHistory.items.length > 0 && (
-          <details className="bento-card group">
-            <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-dark-100">
-              <span>{t('referral.withdrawal.history')}</span>
-              <span className="flex items-center gap-2 text-sm font-normal text-dark-500">
-                {withdrawalHistory?.items?.length || 0}
-                <span className="transition-transform group-open:rotate-180">⌄</span>
-              </span>
-            </summary>
+            <details className="bento-card group">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-dark-100">
+                <span>{t('referral.withdrawal.history')}</span>
+                <span className="flex items-center gap-2 text-sm font-normal text-dark-500">
+                  {withdrawalHistory?.items?.length || 0}
+                  <span className="transition-transform group-open:rotate-180">⌄</span>
+                </span>
+              </summary>
               <div className="mt-4 space-y-2">
                 {withdrawalHistory.items.map((item) => (
                   <div
@@ -694,7 +700,7 @@ export default function Referral() {
                   </div>
                 ))}
               </div>
-          </details>
+            </details>
           )}
         </div>
       )}

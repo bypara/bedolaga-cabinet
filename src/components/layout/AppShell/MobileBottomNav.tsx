@@ -45,9 +45,7 @@ export function MobileBottomNav({
     { path: '/subscriptions', label: t('nav.subscription'), icon: SubscriptionIcon },
     { path: '/balance', label: t('nav.balance'), icon: WalletIcon },
     ...(wheelEnabled ? [{ path: '/wheel', label: t('nav.wheel'), icon: WheelIcon }] : []),
-    ...(referralEnabled
-      ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon }]
-      : []),
+    ...(referralEnabled ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon }] : []),
     { path: '/support', label: t('nav.support'), icon: AgentIcon },
     ...(giftEnabled ? [{ path: '/gift', label: t('nav.gift'), icon: GiftIcon }] : []),
     { path: '/info', label: t('nav.info'), icon: InfoIcon },

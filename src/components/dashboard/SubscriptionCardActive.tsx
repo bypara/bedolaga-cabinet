@@ -74,9 +74,7 @@ export default function SubscriptionCardActive({
           >
             {subscription.tariff_name || t('subscription.currentPlan')}
           </h2>
-          <p
-            className={`mt-1 text-sm ${isExpiringSoon ? 'text-warning-400' : 'text-dark-400'}`}
-          >
+          <p className={`mt-1 text-sm ${isExpiringSoon ? 'text-warning-400' : 'text-dark-400'}`}>
             {t('dashboard.activeUntil')} {formattedDate}
             {isExpiringSoon && ` · ${daysLeft} ${t('subscription.daysShort')}`}
           </p>

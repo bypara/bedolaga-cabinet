@@ -313,10 +313,7 @@ export default function Info() {
     queryKey: ['faq-pages'],
     queryFn: infoApi.getFaqPages,
     enabled:
-      replacementsLoaded &&
-      visibility !== undefined &&
-      visibility.faq &&
-      !tabReplacements?.faq,
+      replacementsLoaded && visibility !== undefined && visibility.faq && !tabReplacements?.faq,
     staleTime: 60_000,
   });
 
@@ -324,10 +321,7 @@ export default function Info() {
     queryKey: ['rules'],
     queryFn: infoApi.getRules,
     enabled:
-      replacementsLoaded &&
-      visibility !== undefined &&
-      visibility.rules &&
-      !tabReplacements?.rules,
+      replacementsLoaded && visibility !== undefined && visibility.rules && !tabReplacements?.rules,
     staleTime: 60_000,
   });
 
@@ -346,10 +340,7 @@ export default function Info() {
     queryKey: ['public-offer'],
     queryFn: infoApi.getPublicOffer,
     enabled:
-      replacementsLoaded &&
-      visibility !== undefined &&
-      visibility.offer &&
-      !tabReplacements?.offer,
+      replacementsLoaded && visibility !== undefined && visibility.offer && !tabReplacements?.offer,
     staleTime: 60_000,
   });
 
@@ -777,7 +768,10 @@ export default function Info() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+        <WebBackButton
+          to="/"
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+        />
         <InfoIcon className="hidden h-6 w-6 sm:block" />
         <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('info.title')}</h1>
       </div>

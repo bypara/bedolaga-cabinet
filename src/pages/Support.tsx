@@ -286,7 +286,10 @@ export default function Support() {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
-          <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+          <WebBackButton
+            to="/"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+          />
           <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('support.title')}</h1>
         </div>
         <Card className="mx-auto mt-12 max-w-md text-center">
@@ -365,7 +368,10 @@ export default function Support() {
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
         <div className="flex items-center gap-3">
-          <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+          <WebBackButton
+            to="/"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+          />
           <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('support.title')}</h1>
         </div>
         <Button

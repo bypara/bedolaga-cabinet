@@ -56,18 +56,9 @@ import { ServerManagementSheet } from '../components/subscription/sheets/ServerM
 import { DeleteSubscriptionSheet } from '../components/subscription/sheets/DeleteSubscriptionSheet';
 
 /** A calm expiry summary. A second-by-second countdown is only useful close to expiry. */
-function SubscriptionExpiry({
-  endDate,
-  isActive,
-}: {
-  endDate: string;
-  isActive: boolean;
-}) {
+function SubscriptionExpiry({ endDate, isActive }: { endDate: string; isActive: boolean }) {
   const { t } = useTranslation();
-  const daysLeft = Math.max(
-    0,
-    Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000),
-  );
+  const daysLeft = Math.max(0, Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000));
   const isUrgent = isActive && daysLeft <= 14;
 
   const formattedDate = new Date(endDate).toLocaleDateString(uiLocale(), {
@@ -850,7 +841,10 @@ export default function Subscription() {
               </div>
 
               <div className="mb-3">
-                <ConnectDeviceTile subscription={subscription} connectedDevices={connectedDevices} />
+                <ConnectDeviceTile
+                  subscription={subscription}
+                  connectedDevices={connectedDevices}
+                />
               </div>
 
               {/* ─── Link actions ─── */}
@@ -859,15 +853,15 @@ export default function Subscription() {
                   !subscription.is_trial)) && (
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   {displayedConnectionUrl && !shouldHideConnectionLink && (
-                  <button
-                    onClick={copyUrl}
-                    className="flex items-center gap-2 rounded-xl border border-dark-700/60 bg-dark-800/40 px-3 py-2 text-xs font-medium text-dark-300 transition-colors hover:bg-dark-800 hover:text-dark-100"
-                    aria-label={t('subscription.copyLink')}
-                    title={t('subscription.copyLink')}
-                  >
-                    {copied ? <CheckIcon /> : <CopyIcon />}
-                    {copied ? t('subscription.copied') : t('subscription.copyLink')}
-                  </button>
+                    <button
+                      onClick={copyUrl}
+                      className="flex items-center gap-2 rounded-xl border border-dark-700/60 bg-dark-800/40 px-3 py-2 text-xs font-medium text-dark-300 transition-colors hover:bg-dark-800 hover:text-dark-100"
+                      aria-label={t('subscription.copyLink')}
+                      title={t('subscription.copyLink')}
+                    >
+                      {copied ? <CheckIcon /> : <CopyIcon />}
+                      {copied ? t('subscription.copied') : t('subscription.copyLink')}
+                    </button>
                   )}
                   {(subscription.is_active || subscription.is_limited) &&
                     !subscription.is_trial && (
@@ -877,10 +871,7 @@ export default function Subscription() {
                         disabled={revokeMutation.isPending || revokeCooldown > 0}
                         className="flex items-center gap-2 rounded-xl border border-warning-500/25 bg-warning-500/[0.07] px-3 py-2 text-xs font-medium text-warning-400 transition-colors hover:bg-warning-500/15 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <RefreshIcon
-                          className="h-3.5 w-3.5"
-                          spinning={revokeMutation.isPending}
-                        />
+                        <RefreshIcon className="h-3.5 w-3.5" spinning={revokeMutation.isPending} />
                         {revokeCooldown > 0
                           ? t('subscription.revoke.cooldown', {
                               minutes: Math.floor(revokeCooldown / 60),

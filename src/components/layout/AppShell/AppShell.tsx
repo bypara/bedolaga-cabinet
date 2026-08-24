@@ -240,7 +240,12 @@ export function AppShell({ children }: AppShellProps) {
         )}
         style={{ width: desktopSidebarWidth }}
       >
-        <div className={cn('mb-3 flex h-12 items-center', desktopSidebarExpanded ? 'px-3' : 'justify-center')}>
+        <div
+          className={cn(
+            'mb-3 flex h-12 items-center',
+            desktopSidebarExpanded ? 'px-3' : 'justify-center',
+          )}
+        >
           <Link
             to="/"
             onClick={handleNavClick}
@@ -251,29 +256,29 @@ export function AppShell({ children }: AppShellProps) {
               desktopSidebarExpanded ? 'flex-1 gap-3' : 'justify-center',
             )}
           >
-          <div className="relative flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-2xl border border-dark-700 bg-dark-800">
-            <span
-              className={cn(
-                'absolute text-sm font-bold text-accent-400 transition-opacity duration-200',
-                hasCustomLogo && isLogoPreloaded() ? 'opacity-0' : 'opacity-100',
-              )}
-            >
-              {logoLetter}
-            </span>
-            {hasCustomLogo && logoUrl && (
-              <img
-                src={logoUrl}
-                alt={appName || 'Logo'}
+            <div className="relative flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-2xl border border-dark-700 bg-dark-800">
+              <span
                 className={cn(
-                  'absolute h-full w-full object-contain transition-opacity duration-200',
-                  isLogoPreloaded() ? 'opacity-100' : 'opacity-0',
+                  'absolute text-sm font-bold text-accent-400 transition-opacity duration-200',
+                  hasCustomLogo && isLogoPreloaded() ? 'opacity-0' : 'opacity-100',
                 )}
-              />
+              >
+                {logoLetter}
+              </span>
+              {hasCustomLogo && logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt={appName || 'Logo'}
+                  className={cn(
+                    'absolute h-full w-full object-contain transition-opacity duration-200',
+                    isLogoPreloaded() ? 'opacity-100' : 'opacity-0',
+                  )}
+                />
+              )}
+            </div>
+            {desktopSidebarExpanded && (
+              <span className="truncate text-sm font-semibold text-dark-100">{appName}</span>
             )}
-          </div>
-          {desktopSidebarExpanded && (
-            <span className="truncate text-sm font-semibold text-dark-100">{appName}</span>
-          )}
           </Link>
         </div>
 
@@ -393,9 +398,7 @@ export function AppShell({ children }: AppShellProps) {
           'lg:ml-[var(--desktop-sidebar-width)]',
           isResizingSidebar ? 'transition-none' : 'transition-[margin-left] duration-300',
         )}
-        style={
-          { '--desktop-sidebar-width': `${desktopSidebarWidth}px` } as CSSProperties
-        }
+        style={{ '--desktop-sidebar-width': `${desktopSidebarWidth}px` } as CSSProperties}
       >
         <main className="mx-auto max-w-6xl px-4 py-6 pb-8 lg:px-6">{children}</main>
       </div>

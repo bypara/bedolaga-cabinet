@@ -584,20 +584,20 @@ function BuyTabContent({
               (period.original_price_kopeks ?? 0) > period.price_kopeks,
           ),
         ) && (
-        <div className="flex items-center gap-3 rounded-xl border border-success-500/30 bg-success-500/10 p-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-500/20">
-            <SparklesIcon className="h-4 w-4 text-success-400" />
-          </div>
-          <div>
-            <div className="text-sm font-medium text-success-400">
-              {t('subscription.promoGroup.yourGroup', { name: config.promo_group_name })}
+          <div className="flex items-center gap-3 rounded-xl border border-success-500/30 bg-success-500/10 p-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-success-500/20">
+              <SparklesIcon className="h-4 w-4 text-success-400" />
             </div>
-            <div className="text-xs text-dark-400">
-              {t('subscription.promoGroup.personalDiscountsApplied')}
+            <div>
+              <div className="text-sm font-medium text-success-400">
+                {t('subscription.promoGroup.yourGroup', { name: config.promo_group_name })}
+              </div>
+              <div className="text-xs text-dark-400">
+                {t('subscription.promoGroup.personalDiscountsApplied')}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Active discount banner */}
       {config.active_discount_percent != null && config.active_discount_percent > 0 && (

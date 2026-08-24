@@ -71,35 +71,6 @@ export default function TelegramLoginButton({
     useRef<(data: { id_token?: string; error?: string }) => void>(undefined);
   const mountedRef = useRef(true);
 
-  // OIDC tokens are intentionally short-lived. The user can spend enough time
-  // reading the legal documents for the original token to expire, so the
-  // consent retry must request a new token instead of replaying the old one.
-  const requestFreshOIDCToken = useCallback((): Promise<string> => {
-    const telegramLogin = window.Telegram?.Login;
-    const clientId = widgetConfig?.oidc_client_id;
-    if (!telegramLogin || !clientId) {
-      return Promise.reject(new Error(t('auth.loginFailed')));
-    }
-
-    return new Promise((resolve, reject) => {
-      telegramLogin.init(
-        {
-          client_id: Number(clientId) || clientId,
-          request_access: widgetConfig.request_access ? ['write'] : undefined,
-          lang: document.documentElement.lang || 'en',
-        },
-        (freshData) => {
-          if (freshData.error || !freshData.id_token) {
-            reject(new Error(freshData.error || t('auth.loginFailed')));
-            return;
-          }
-          resolve(freshData.id_token);
-        },
-      );
-      telegramLogin.open();
-    });
-  }, [t, widgetConfig?.oidc_client_id, widgetConfig?.request_access]);
-
   useEffect(() => {
     mountedRef.current = true;
     return () => {
@@ -131,8 +102,7 @@ export default function TelegramLoginButton({
     } catch (err: unknown) {
       if (!mountedRef.current) return;
       const consentCaptured = onConsentRequired?.(err, async (acceptedDocuments) => {
-        const freshToken = await requestFreshOIDCToken();
-        await loginWithTelegramOIDC(freshToken, acceptedDocuments);
+        await loginWithTelegramOIDC(data.id_token as string, acceptedDocuments);
         navigate('/');
       });
       if (consentCaptured) {

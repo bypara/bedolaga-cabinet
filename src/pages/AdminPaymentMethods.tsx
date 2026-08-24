@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -23,17 +23,19 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { adminPaymentMethodsApi } from '../api/adminPaymentMethods';
 import type { PaymentMethodConfig } from '../types';
-import { BackIcon, GripIcon, ChevronRightIcon, SaveIcon } from '@/components/icons';
+import { BackIcon, GripIcon, ChevronRightIcon } from '@/components/icons';
 
 interface SortableCardProps {
   config: PaymentMethodConfig;
   onClick: () => void;
+  disabled: boolean;
 }
 
-function SortablePaymentCard({ config, onClick }: SortableCardProps) {
+function SortablePaymentCard({ config, onClick, disabled }: SortableCardProps) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: config.method_id,
+    disabled,
   });
 
   const style: React.CSSProperties = {
@@ -87,7 +89,8 @@ function SortablePaymentCard({ config, onClick }: SortableCardProps) {
       <button
         {...attributes}
         {...listeners}
-        className="flex-shrink-0 cursor-grab touch-none rounded-lg p-2.5 text-dark-500 hover:bg-dark-700/50 hover:text-dark-300 active:cursor-grabbing sm:p-1.5"
+        disabled={disabled}
+        className="flex-shrink-0 cursor-grab touch-none rounded-lg p-2.5 text-dark-500 hover:bg-dark-700/50 hover:text-dark-300 active:cursor-grabbing disabled:cursor-wait disabled:opacity-50 sm:p-1.5"
         title={t('admin.paymentMethods.dragToReorder')}
       >
         <GripIcon />
@@ -152,7 +155,6 @@ export default function AdminPaymentMethods() {
 
   const notify = useNotify();
   const [methods, setMethods] = useState<PaymentMethodConfig[]>([]);
-  const [orderChanged, setOrderChanged] = useState(false);
 
   // Fetch payment methods
   const { data: fetchedMethods, isLoading } = useQuery({
@@ -160,25 +162,31 @@ export default function AdminPaymentMethods() {
     queryFn: adminPaymentMethodsApi.getAll,
   });
 
-  // Sync fetched data to local state
-  useEffect(() => {
-    if (fetchedMethods && !orderChanged) {
-      setMethods(fetchedMethods);
-    }
-  }, [fetchedMethods, orderChanged]);
-
-  // Save order mutation
+  // Persist every completed drag immediately so the same order is used by
+  // the user-facing balance page without a separate, easy-to-miss save step.
   const saveOrderMutation = useMutation({
-    mutationFn: (methodIds: string[]) => adminPaymentMethodsApi.updateOrder(methodIds),
-    onSuccess: () => {
-      setOrderChanged(false);
-      queryClient.invalidateQueries({ queryKey: ['admin-payment-methods'] });
+    mutationFn: ({ methodIds }: { methodIds: string[]; previous: PaymentMethodConfig[] }) =>
+      adminPaymentMethodsApi.updateOrder(methodIds),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-payment-methods'] }),
+        queryClient.invalidateQueries({ queryKey: ['payment-methods'] }),
+      ]);
       notify.success(t('admin.paymentMethods.orderSaved'));
     },
-    onError: () => {
+    onError: (_error, variables) => {
+      setMethods(variables.previous);
       notify.error(t('common.error'));
     },
   });
+
+  // Sync fetched data to local state, but never overwrite an optimistic drag
+  // while its order is still being saved.
+  useEffect(() => {
+    if (fetchedMethods && !saveOrderMutation.isPending) {
+      setMethods(fetchedMethods);
+    }
+  }, [fetchedMethods, saveOrderMutation.isPending]);
 
   // DnD sensors - PointerSensor handles both mouse and touch
   const sensors = useSensors(
@@ -186,21 +194,21 @@ export default function AdminPaymentMethods() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setMethods((prev) => {
-        const oldIndex = prev.findIndex((m) => m.method_id === active.id);
-        const newIndex = prev.findIndex((m) => m.method_id === over.id);
-        if (oldIndex === -1 || newIndex === -1) return prev;
-        return arrayMove(prev, oldIndex, newIndex);
-      });
-      setOrderChanged(true);
-    }
-  }, []);
+    if (!over || active.id === over.id || saveOrderMutation.isPending) return;
 
-  const handleSaveOrder = () => {
-    saveOrderMutation.mutate(methods.map((m) => m.method_id));
+    const oldIndex = methods.findIndex((method) => method.method_id === active.id);
+    const newIndex = methods.findIndex((method) => method.method_id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const previous = methods;
+    const reordered = arrayMove(methods, oldIndex, newIndex);
+    setMethods(reordered);
+    saveOrderMutation.mutate({
+      methodIds: reordered.map((method) => method.method_id),
+      previous,
+    });
   };
 
   return (
@@ -222,19 +230,11 @@ export default function AdminPaymentMethods() {
             <p className="text-sm text-dark-400">{t('admin.paymentMethods.subtitle')}</p>
           </div>
         </div>
-        {orderChanged && (
-          <button
-            onClick={handleSaveOrder}
-            disabled={saveOrderMutation.isPending}
-            className="btn-primary flex items-center gap-2"
-          >
-            {saveOrderMutation.isPending ? (
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            ) : (
-              <SaveIcon className="h-4 w-4" />
-            )}
-            {t('admin.paymentMethods.saveOrder')}
-          </button>
+        {saveOrderMutation.isPending && (
+          <div className="flex items-center gap-2 text-sm text-dark-400" aria-live="polite">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-accent-500/30 border-t-accent-500" />
+            {t('common.saving')}
+          </div>
         )}
       </div>
 
@@ -261,6 +261,7 @@ export default function AdminPaymentMethods() {
                   <SortablePaymentCard
                     key={config.method_id}
                     config={config}
+                    disabled={saveOrderMutation.isPending}
                     onClick={() => navigate(`/admin/payment-methods/${config.method_id}/edit`)}
                   />
                 ))}

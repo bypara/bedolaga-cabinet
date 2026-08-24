@@ -1526,7 +1526,7 @@
       "disabled": "关闭",
       "notConfigured": "未配置",
       "dragToReorder": "拖动以重新排序",
-      "dragHint": "拖动卡片以重新排序。点击以配置。",
+      "dragHint": "拖动卡片可更改用户看到的顺序。点击卡片进行配置。",
       "saveOrder": "保存顺序",
       "orderSaved": "顺序已保存",
       "saved": "设置已保存",

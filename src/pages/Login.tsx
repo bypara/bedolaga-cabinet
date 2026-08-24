@@ -516,7 +516,12 @@ export default function Login() {
                   setPendingConsentRetry(null);
                   setRequiredConsentDocuments(null);
                 } catch (err) {
-                  setError(getApiErrorMessage(err, t('common.error')));
+                  const responseError = err as { response?: { status?: number } };
+                  setError(
+                    responseError.response?.status === 401
+                      ? t('auth.loginFailed')
+                      : getApiErrorMessage(err, t('common.error')),
+                  );
                 } finally {
                   setIsLoading(false);
                 }
@@ -916,7 +921,7 @@ export default function Login() {
             )}
           </div>
         )}
-        {footerEnabled && <LegalFooter className="pt-1" />}
+        {footerEnabled && !pendingConsentRetry && <LegalFooter className="pt-1" />}
       </div>
     </div>
   );

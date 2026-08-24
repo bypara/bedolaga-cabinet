@@ -205,7 +205,10 @@ export default function Balance() {
     >
       <motion.div variants={staggerItem}>
         <div className="flex items-center gap-3">
-          <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+          <WebBackButton
+            to="/"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+          />
           <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('balance.title')}</h1>
         </div>
       </motion.div>

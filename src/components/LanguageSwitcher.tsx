@@ -9,7 +9,10 @@ interface LanguageSwitcherProps {
   expanded?: boolean;
 }
 
-export default function LanguageSwitcher({ sidebar = false, expanded = false }: LanguageSwitcherProps) {
+export default function LanguageSwitcher({
+  sidebar = false,
+  expanded = false,
+}: LanguageSwitcherProps) {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);

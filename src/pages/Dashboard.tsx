@@ -305,9 +305,7 @@ export default function Dashboard() {
           <h1 className="mt-0.5 truncate text-xl font-bold text-dark-50 sm:text-2xl">
             <span className="lg:hidden">{t('nav.dashboard')}</span>
             <span className="hidden lg:inline">
-              {userName
-                ? t('dashboard.welcome', { name: userName })
-                : t('dashboard.welcomeNoName')}
+              {userName ? t('dashboard.welcome', { name: userName }) : t('dashboard.welcomeNoName')}
             </span>
           </h1>
         </div>
@@ -362,12 +360,7 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      <div
-        className={cn(
-          'grid gap-3 lg:hidden',
-          giftEnabled ? 'grid-cols-3' : 'grid-cols-2',
-        )}
-      >
+      <div className={cn('grid gap-3 lg:hidden', giftEnabled ? 'grid-cols-3' : 'grid-cols-2')}>
         <Link
           to="/support"
           className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-dark-700/70 bg-dark-900/55 px-2 py-3 text-center transition-colors active:bg-dark-800"

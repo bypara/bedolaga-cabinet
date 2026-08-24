@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type CSSProperties, useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -27,23 +27,35 @@ import {
   GiftIcon,
   HomeIcon,
   CreditCardIcon,
-  ChatIcon,
+  AgentIcon,
   UserIcon,
   UsersIcon,
   ShieldIcon,
   InfoIcon,
+  WheelIcon,
+  GamepadIcon,
+  ClipboardIcon,
   LogoutIcon,
   SunIcon,
   MoonIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from '@/components/icons';
 
-import { MobileBottomNav } from './MobileBottomNav';
 import { AppHeader } from './AppHeader';
 import { useBackgroundConsumer } from '@/components/backgrounds/BackgroundHost';
 
 interface AppShellProps {
   children: React.ReactNode;
 }
+
+const DESKTOP_SIDEBAR_MIN_WIDTH = 80;
+const DESKTOP_SIDEBAR_DEFAULT_WIDTH = 256;
+const DESKTOP_SIDEBAR_MAX_WIDTH = 360;
+const DESKTOP_SIDEBAR_LABEL_WIDTH = 176;
+
+const clampSidebarWidth = (width: number) =>
+  Math.min(DESKTOP_SIDEBAR_MAX_WIDTH, Math.max(DESKTOP_SIDEBAR_MIN_WIDTH, width));
 
 export function AppShell({ children }: AppShellProps) {
   const { t } = useTranslation();
@@ -76,51 +88,79 @@ export function AppShell({ children }: AppShellProps) {
   const isMobileFullscreen = isFullscreen && isMobile;
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+  const [desktopSidebarWidth, setDesktopSidebarWidth] = useState(() => {
+    if (typeof window === 'undefined') return DESKTOP_SIDEBAR_DEFAULT_WIDTH;
+    const savedWidth = Number(localStorage.getItem('cabinet-desktop-sidebar-width'));
+    if (Number.isFinite(savedWidth)) return clampSidebarWidth(savedWidth);
+    return localStorage.getItem('cabinet-desktop-sidebar') === 'collapsed'
+      ? DESKTOP_SIDEBAR_MIN_WIDTH
+      : DESKTOP_SIDEBAR_DEFAULT_WIDTH;
+  });
+  const [isResizingSidebar, setIsResizingSidebar] = useState(false);
+  const desktopSidebarExpanded = desktopSidebarWidth >= DESKTOP_SIDEBAR_LABEL_WIDTH;
 
-  // Reset keyboard state on route change — prevents bottom nav staying hidden after navigation
   useEffect(() => {
-    setIsKeyboardOpen(false);
-  }, [location.pathname]);
+    if (!isResizingSidebar) return;
 
-  // Keyboard detection for hiding bottom nav
-  useEffect(() => {
-    const handleFocusIn = (e: FocusEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
-        setIsKeyboardOpen(true);
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const nextWidth = clampSidebarWidth(event.clientX);
+      setDesktopSidebarWidth(nextWidth);
+      localStorage.setItem('cabinet-desktop-sidebar-width', String(nextWidth));
+      if (nextWidth >= DESKTOP_SIDEBAR_LABEL_WIDTH) {
+        localStorage.setItem('cabinet-desktop-sidebar-expanded-width', String(nextWidth));
       }
     };
+    const handlePointerUp = () => setIsResizingSidebar(false);
 
-    const handleFocusOut = (e: FocusEvent) => {
-      const relatedTarget = e.relatedTarget as HTMLElement | null;
-      if (
-        !relatedTarget ||
-        (relatedTarget.tagName !== 'INPUT' &&
-          relatedTarget.tagName !== 'TEXTAREA' &&
-          !relatedTarget.isContentEditable)
-      ) {
-        setIsKeyboardOpen(false);
-      }
-    };
-
-    document.addEventListener('focusin', handleFocusIn);
-    document.addEventListener('focusout', handleFocusOut);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp, { once: true });
 
     return () => {
-      document.removeEventListener('focusin', handleFocusIn);
-      document.removeEventListener('focusout', handleFocusOut);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
     };
-  }, []);
+  }, [isResizingSidebar]);
 
-  // Desktop navigation — labels always visible (no hover-reveal gimmick)
+  const toggleDesktopSidebar = () => {
+    if (desktopSidebarExpanded) {
+      localStorage.setItem('cabinet-desktop-sidebar-expanded-width', String(desktopSidebarWidth));
+      localStorage.setItem('cabinet-desktop-sidebar-width', String(DESKTOP_SIDEBAR_MIN_WIDTH));
+      setDesktopSidebarWidth(DESKTOP_SIDEBAR_MIN_WIDTH);
+      return;
+    }
+
+    const savedExpandedWidth = Number(
+      localStorage.getItem('cabinet-desktop-sidebar-expanded-width'),
+    );
+    const nextWidth = Number.isFinite(savedExpandedWidth)
+      ? clampSidebarWidth(savedExpandedWidth)
+      : DESKTOP_SIDEBAR_DEFAULT_WIDTH;
+    setDesktopSidebarWidth(Math.max(DESKTOP_SIDEBAR_LABEL_WIDTH, nextWidth));
+    localStorage.setItem(
+      'cabinet-desktop-sidebar-width',
+      String(Math.max(DESKTOP_SIDEBAR_LABEL_WIDTH, nextWidth)),
+    );
+  };
+
+  // Desktop rail owns every user destination. Labels appear as tooltips so the
+  // content keeps the full width of the viewport.
   const desktopNav = [
     { path: '/', label: t('nav.dashboard'), icon: HomeIcon },
     { path: '/subscriptions', label: t('nav.subscription'), icon: SubscriptionIcon },
     { path: '/balance', label: t('nav.balance'), icon: CreditCardIcon },
     ...(referralEnabled ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon }] : []),
     ...(giftEnabled ? [{ path: '/gift', label: t('nav.gift'), icon: GiftIcon }] : []),
-    { path: '/support', label: t('nav.support'), icon: ChatIcon },
+    ...(wheelEnabled ? [{ path: '/wheel', label: t('nav.wheel'), icon: WheelIcon }] : []),
+    ...(hasContests ? [{ path: '/contests', label: t('nav.contests'), icon: GamepadIcon }] : []),
+    ...(hasPolls ? [{ path: '/polls', label: t('nav.polls'), icon: ClipboardIcon }] : []),
+    { path: '/support', label: t('nav.support'), icon: AgentIcon },
     { path: '/info', label: t('nav.info'), icon: InfoIcon },
     { path: '/profile', label: t('nav.profile'), icon: UserIcon },
   ];
@@ -134,9 +174,7 @@ export function AppShell({ children }: AppShellProps) {
     haptic.impact('light');
   };
 
-  // A single elegant nav link: icon + label always visible, with a shared
-  // framer-motion pill that slides to the active item on navigation.
-  const renderNavLink = (
+  const renderRailLink = (
     path: string,
     label: string,
     Icon: React.ComponentType<{ className?: string }>,
@@ -149,32 +187,37 @@ export function AppShell({ children }: AppShellProps) {
         to={path}
         onClick={handleNavClick}
         aria-label={label}
+        title={label}
         className={cn(
-          'relative flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors duration-200',
+          'relative flex h-11 shrink-0 items-center rounded-xl transition-colors duration-200',
+          desktopSidebarExpanded
+            ? 'w-full justify-start gap-3 px-3'
+            : 'w-11 self-center justify-center',
           active
             ? admin
               ? 'text-warning-300'
-              : 'text-dark-50'
+              : 'text-on-accent'
             : admin
               ? 'text-warning-500/70 hover:bg-warning-500/10 hover:text-warning-300'
-              : 'text-dark-400 hover:bg-dark-800/60 hover:text-dark-100',
+              : 'text-dark-400 hover:bg-dark-800 hover:text-dark-100',
         )}
       >
         {active && (
           <motion.span
-            layoutId="desktop-nav-active"
+            layoutId="desktop-rail-active"
             className={cn(
-              // Подсветка-пилюля активного пункта — «приподнята» над треком капсулы
-              'absolute inset-0 rounded-full shadow-sm',
+              'absolute inset-0 rounded-xl shadow-sm',
               admin
                 ? 'bg-warning-500/15 ring-1 ring-warning-500/20'
-                : 'bg-dark-700/80 ring-1 ring-dark-600/40',
+                : 'bg-accent-500 shadow-[0_8px_24px_rgba(var(--color-accent-500),0.22)]',
             )}
             transition={{ type: 'spring', stiffness: 500, damping: 35 }}
           />
         )}
-        <Icon className="relative h-4 w-4 shrink-0" />
-        <span className="relative whitespace-nowrap">{label}</span>
+        <Icon className="relative h-5 w-5 shrink-0" />
+        {desktopSidebarExpanded && (
+          <span className="relative min-w-0 truncate text-sm font-medium">{label}</span>
+        )}
       </Link>
     );
   };
@@ -189,92 +232,142 @@ export function AppShell({ children }: AppShellProps) {
       <SuccessNotificationModal />
       <PromptDialogHost />
 
-      {/* Desktop Header */}
-      {/* w-screen вместо left-0 right-0: right-0 упирается в край вьюпорта БЕЗ
-          скроллбара, и капсула по центру прыгала бы на полширины скроллбара при
-          переходах между страницами со скроллом и без. 100vw даёт ту же ось
-          центрирования, что и у body (тоже 100vw). */}
-      <header className="fixed left-0 top-0 z-50 hidden w-screen border-b border-dark-800/50 bg-dark-950/95 lg:block">
-        {/* 3-зонный grid: лого | капсула | действия. Колонки 1fr_auto_1fr держат
-            капсулу строго по центру вьюпорта НЕЗАВИСИМО от ширины лого/действий,
-            а действия — у правого края. Поэтому ничего не «скачет» при переходах
-            (в т.ч. в админку): смена ширины в одной зоне не двигает другие. */}
-        <div className="mx-auto grid h-14 max-w-[1600px] grid-cols-[1fr_auto_1fr] items-center gap-4 px-6">
-          {/* Logo */}
+      {/* Desktop navigation rail */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 z-50 hidden flex-col border-r border-dark-800 bg-dark-950/95 py-3 lg:flex',
+          isResizingSidebar ? 'transition-none' : 'transition-[width] duration-300',
+        )}
+        style={{ width: desktopSidebarWidth }}
+      >
+        <div className={cn('mb-3 flex h-12 items-center', desktopSidebarExpanded ? 'px-3' : 'justify-center')}>
           <Link
             to="/"
-            className="flex shrink-0 items-center gap-2.5 justify-self-start"
             onClick={handleNavClick}
-          >
-            <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg bg-dark-800">
-              <span
-                className={cn(
-                  'absolute text-sm font-bold text-accent-400 transition-opacity duration-200',
-                  hasCustomLogo && isLogoPreloaded() ? 'opacity-0' : 'opacity-100',
-                )}
-              >
-                {logoLetter}
-              </span>
-              {hasCustomLogo && logoUrl && (
-                <img
-                  src={logoUrl}
-                  alt={appName || 'Logo'}
-                  className={cn(
-                    'absolute h-full w-full object-contain transition-opacity duration-200',
-                    isLogoPreloaded() ? 'opacity-100' : 'opacity-0',
-                  )}
-                />
-              )}
-            </div>
-            <span className="text-base font-semibold text-dark-100">{appName}</span>
-          </Link>
-
-          {/* Navigation — единая «капсула» (segmented control): все пункты видны
-              всегда, без скролла/сжатия/сворачивания. Центрируется средней
-              колонкой grid (justify-self-center), а не auto-margin'ами. */}
-          <nav className="flex items-center gap-0.5 justify-self-center rounded-full border border-dark-800/70 bg-dark-900/50 p-1 shadow-sm backdrop-blur-sm">
-            {desktopNav.map((item) => renderNavLink(item.path, item.label, item.icon))}
-            {isAdmin && (
-              <>
-                <div className="mx-1 h-5 w-px shrink-0 bg-dark-700/60" />
-                {renderNavLink('/admin', t('admin.nav.title'), ShieldIcon, true)}
-              </>
+            aria-label={appName}
+            title={appName}
+            className={cn(
+              'flex min-w-0 items-center',
+              desktopSidebarExpanded ? 'flex-1 gap-3' : 'justify-center',
             )}
-          </nav>
-
-          {/* Right side actions — правая колонка grid, прижата к краю, не сжимается */}
-          <div className="flex shrink-0 items-center gap-2 justify-self-end">
-            <button
-              onClick={() => {
-                haptic.impact('light');
-                toggleTheme();
-              }}
+          >
+          <div className="relative flex h-10 w-10 flex-none items-center justify-center overflow-hidden rounded-2xl border border-dark-700 bg-dark-800">
+            <span
               className={cn(
-                'rounded-xl border border-dark-700/50 bg-dark-800/50 p-2 text-dark-400 transition-colors duration-200 hover:bg-dark-700 hover:text-accent-400',
-                !canToggleTheme && 'hidden',
+                'absolute text-sm font-bold text-accent-400 transition-opacity duration-200',
+                hasCustomLogo && isLogoPreloaded() ? 'opacity-0' : 'opacity-100',
               )}
-              aria-label={
-                isDark ? t('theme.light') || 'Light mode' : t('theme.dark') || 'Dark mode'
-              }
-              title={isDark ? t('theme.light') || 'Light mode' : t('theme.dark') || 'Dark mode'}
             >
-              {isDark ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
-            </button>
-            <TicketNotificationBell isAdmin={location.pathname.startsWith('/admin')} />
-            <LanguageSwitcher />
-            <button
-              onClick={() => {
-                haptic.impact('light');
-                logout();
-              }}
-              className="rounded-xl border border-dark-700/50 bg-dark-800/50 p-2 text-dark-400 transition-colors duration-200 hover:bg-dark-700 hover:text-accent-400"
-              title={t('nav.logout')}
-            >
-              <LogoutIcon className="h-5 w-5" />
-            </button>
+              {logoLetter}
+            </span>
+            {hasCustomLogo && logoUrl && (
+              <img
+                src={logoUrl}
+                alt={appName || 'Logo'}
+                className={cn(
+                  'absolute h-full w-full object-contain transition-opacity duration-200',
+                  isLogoPreloaded() ? 'opacity-100' : 'opacity-0',
+                )}
+              />
+            )}
           </div>
+          {desktopSidebarExpanded && (
+            <span className="truncate text-sm font-semibold text-dark-100">{appName}</span>
+          )}
+          </Link>
         </div>
-      </header>
+
+        <button
+          type="button"
+          onClick={toggleDesktopSidebar}
+          className="absolute -right-3 top-6 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-dark-700 bg-dark-900 text-dark-400 shadow-lg transition-colors hover:text-dark-100"
+          aria-label={desktopSidebarExpanded ? 'Свернуть меню' : 'Развернуть меню'}
+          title={desktopSidebarExpanded ? 'Свернуть меню' : 'Развернуть меню'}
+        >
+          {desktopSidebarExpanded ? (
+            <ChevronLeftIcon className="h-4 w-4" />
+          ) : (
+            <ChevronRightIcon className="h-4 w-4" />
+          )}
+        </button>
+
+        <div
+          role="separator"
+          aria-label="Изменить ширину меню"
+          aria-orientation="vertical"
+          aria-valuemin={DESKTOP_SIDEBAR_MIN_WIDTH}
+          aria-valuemax={DESKTOP_SIDEBAR_MAX_WIDTH}
+          aria-valuenow={desktopSidebarWidth}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            setIsResizingSidebar(true);
+          }}
+          className="group absolute inset-y-0 -right-1 z-10 w-2 cursor-col-resize touch-none"
+        >
+          <span
+            className={cn(
+              'absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-accent-500 transition-opacity',
+              isResizingSidebar ? 'opacity-100' : 'opacity-0 group-hover:opacity-70',
+            )}
+          />
+        </div>
+
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden px-3 py-1">
+          {desktopNav.map((item) => renderRailLink(item.path, item.label, item.icon))}
+          {isAdmin && (
+            <>
+              <div className="my-1 h-px w-full shrink-0 bg-dark-800" />
+              {renderRailLink('/admin', t('admin.nav.title'), ShieldIcon, true)}
+            </>
+          )}
+        </nav>
+
+        <div className="mt-2 flex flex-col gap-1 border-t border-dark-800 px-3 pt-2">
+          <TicketNotificationBell
+            isAdmin={location.pathname.startsWith('/admin')}
+            sidebar
+            expanded={desktopSidebarExpanded}
+          />
+          <button
+            onClick={() => {
+              haptic.impact('light');
+              toggleTheme();
+            }}
+            className={cn(
+              'flex h-11 w-full items-center rounded-xl text-dark-400 transition-colors hover:bg-dark-800 hover:text-accent-400',
+              desktopSidebarExpanded ? 'justify-start gap-3 px-3' : 'justify-center',
+              !canToggleTheme && 'hidden',
+            )}
+            aria-label={isDark ? t('theme.light') : t('theme.dark')}
+            title={isDark ? t('theme.light') : t('theme.dark')}
+          >
+            {isDark ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
+            {desktopSidebarExpanded && (
+              <span className="text-sm font-medium">
+                {isDark ? t('theme.light') : t('theme.dark')}
+              </span>
+            )}
+          </button>
+          <LanguageSwitcher sidebar expanded={desktopSidebarExpanded} />
+          <button
+            onClick={() => {
+              haptic.impact('light');
+              logout();
+            }}
+            className={cn(
+              'flex h-11 w-full items-center rounded-xl text-dark-400 transition-colors hover:bg-error-500/10 hover:text-error-400',
+              desktopSidebarExpanded ? 'justify-start gap-3 px-3' : 'justify-center',
+            )}
+            aria-label={t('nav.logout')}
+            title={t('nav.logout')}
+          >
+            <LogoutIcon className="h-5 w-5" />
+            {desktopSidebarExpanded && (
+              <span className="text-sm font-medium">{t('nav.logout')}</span>
+            )}
+          </button>
+        </div>
+      </aside>
 
       {/* Mobile Header */}
       <AppHeader
@@ -286,28 +379,26 @@ export function AppShell({ children }: AppShellProps) {
         safeAreaInset={safeAreaInset}
         contentSafeAreaInset={contentSafeAreaInset}
         telegramPlatform={platform}
-        wheelEnabled={wheelEnabled}
-        referralEnabled={referralEnabled}
         hasContests={hasContests}
         hasPolls={hasPolls}
         giftEnabled={giftEnabled}
       />
 
-      {/* Desktop spacer */}
-      <div className="hidden h-14 lg:block" />
-
       {/* Mobile spacer */}
       <div className="lg:hidden" style={{ height: headerHeight }} />
 
-      {/* Main content */}
-      <main className="mx-auto max-w-6xl px-4 py-6 pb-28 lg:px-6 lg:pb-8">{children}</main>
-
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav
-        isKeyboardOpen={isKeyboardOpen}
-        referralEnabled={referralEnabled}
-        wheelEnabled={wheelEnabled}
-      />
+      {/* Main content centered inside the area that remains beside the sidebar */}
+      <div
+        className={cn(
+          'lg:ml-[var(--desktop-sidebar-width)]',
+          isResizingSidebar ? 'transition-none' : 'transition-[margin-left] duration-300',
+        )}
+        style={
+          { '--desktop-sidebar-width': `${desktopSidebarWidth}px` } as CSSProperties
+        }
+      >
+        <main className="mx-auto max-w-6xl px-4 py-6 pb-8 lg:px-6">{children}</main>
+      </div>
     </div>
   );
 }

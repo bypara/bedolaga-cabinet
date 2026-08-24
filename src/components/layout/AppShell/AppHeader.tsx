@@ -20,24 +20,17 @@ import { themeColorsApi } from '@/api/themeColors';
 import { cn } from '@/lib/utils';
 
 import LanguageSwitcher from '@/components/LanguageSwitcher';
-import TicketNotificationBell from '@/components/TicketNotificationBell';
 
 // Icons
 import {
-  HomeIcon,
-  SubscriptionIcon,
-  WalletIcon,
-  UsersIcon,
-  ChatIcon,
   UserIcon,
+  AgentIcon,
+  GiftIcon,
+  InfoIcon,
   LogoutIcon,
   GamepadIcon,
   ClipboardIcon,
-  InfoIcon,
   CogIcon,
-  WheelIcon,
-  GiftIcon,
-  MenuIcon,
   CloseIcon,
   SunIcon,
   MoonIcon,
@@ -58,8 +51,6 @@ interface AppHeaderProps {
   safeAreaInset: { top: number; bottom: number; left: number; right: number };
   contentSafeAreaInset: { top: number; bottom: number; left: number; right: number };
   telegramPlatform?: TelegramPlatform;
-  wheelEnabled?: boolean;
-  referralEnabled?: boolean;
   hasContests?: boolean;
   hasPolls?: boolean;
   giftEnabled?: boolean;
@@ -74,8 +65,6 @@ export function AppHeader({
   safeAreaInset,
   contentSafeAreaInset,
   telegramPlatform,
-  wheelEnabled,
-  referralEnabled,
   hasContests,
   hasPolls,
   giftEnabled,
@@ -159,15 +148,11 @@ export function AppHeader({
   };
   const isAdminActive = () => location.pathname.startsWith('/admin');
 
+  // The icon bar owns all regular user destinations. The drawer is reserved for
+  // occasional feature surfaces, administration and session actions.
   const navItems = [
-    { path: '/', label: t('nav.dashboard'), icon: HomeIcon },
-    { path: '/subscriptions', label: t('nav.subscription'), icon: SubscriptionIcon },
-    { path: '/balance', label: t('nav.balance'), icon: WalletIcon },
-    ...(referralEnabled ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon }] : []),
-    { path: '/support', label: t('nav.support'), icon: ChatIcon },
     ...(hasContests ? [{ path: '/contests', label: t('nav.contests'), icon: GamepadIcon }] : []),
     ...(hasPolls ? [{ path: '/polls', label: t('nav.polls'), icon: ClipboardIcon }] : []),
-    ...(wheelEnabled ? [{ path: '/wheel', label: t('nav.wheel'), icon: WheelIcon }] : []),
     ...(giftEnabled ? [{ path: '/gift', label: t('nav.gift'), icon: GiftIcon }] : []),
     { path: '/info', label: t('nav.info'), icon: InfoIcon },
   ];
@@ -238,44 +223,23 @@ export function AppHeader({
                 </button>
               )}
 
-              {/* Theme toggle */}
-              {canToggle && (
-                <button
-                  onClick={() => {
-                    haptic.impact('light');
-                    toggleTheme();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="relative rounded-linear-lg border border-dark-700/50 bg-dark-800/50 p-2 text-dark-400 transition-all duration-200 hover:bg-dark-700 hover:text-accent-400"
-                  title={isDark ? t('theme.light') || 'Light mode' : t('theme.dark') || 'Dark mode'}
-                >
-                  <div className="relative h-5 w-5">
-                    <div
-                      className={cn(
-                        'absolute inset-0 transition-all duration-300',
-                        isDark ? 'rotate-0 opacity-100' : 'rotate-90 opacity-0',
-                      )}
-                    >
-                      <MoonIcon className="h-5 w-5" />
-                    </div>
-                    <div
-                      className={cn(
-                        'absolute inset-0 transition-all duration-300',
-                        isDark ? '-rotate-90 opacity-0' : 'rotate-0 opacity-100',
-                      )}
-                    >
-                      <SunIcon className="h-5 w-5" />
-                    </div>
-                  </div>
-                </button>
-              )}
-
-              <div onClick={() => setMobileMenuOpen(false)}>
-                <TicketNotificationBell isAdmin={isAdminActive()} />
-              </div>
-              <div onClick={() => setMobileMenuOpen(false)}>
-                <LanguageSwitcher />
-              </div>
+              <Link
+                to="/support"
+                onClick={() => {
+                  haptic.impact('light');
+                  setMobileMenuOpen(false);
+                }}
+                className={cn(
+                  'flex h-11 w-11 items-center justify-center rounded-xl transition-colors',
+                  location.pathname.startsWith('/support')
+                    ? 'bg-accent-500/15 text-accent-400'
+                    : 'text-dark-400 hover:bg-dark-800 hover:text-dark-100',
+                )}
+                aria-label={t('nav.support')}
+                title={t('nav.support')}
+              >
+                <AgentIcon className="h-5 w-5" />
+              </Link>
 
               {/* Mobile menu button */}
               <button
@@ -295,7 +259,7 @@ export function AppHeader({
                 {mobileMenuOpen ? (
                   <CloseIcon className="h-6 w-6" />
                 ) : (
-                  <MenuIcon className="h-6 w-6" />
+                  <CogIcon className="h-6 w-6" />
                 )}
               </button>
             </div>
@@ -351,6 +315,41 @@ export function AppHeader({
                       @{user?.username || `ID: ${user?.telegram_id}`}
                     </div>
                   </div>
+                </div>
+                <div className="flex flex-none items-center gap-1.5">
+                  {canToggle && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        haptic.impact('light');
+                        toggleTheme();
+                      }}
+                      className="relative rounded-linear-lg border border-dark-700/50 bg-dark-800/50 p-2 text-dark-400 transition-all duration-200 hover:bg-dark-700 hover:text-accent-400"
+                      title={
+                        isDark ? t('theme.light') || 'Light mode' : t('theme.dark') || 'Dark mode'
+                      }
+                    >
+                      <div className="relative h-5 w-5">
+                        <div
+                          className={cn(
+                            'absolute inset-0 transition-all duration-300',
+                            isDark ? 'rotate-0 opacity-100' : 'rotate-90 opacity-0',
+                          )}
+                        >
+                          <MoonIcon className="h-5 w-5" />
+                        </div>
+                        <div
+                          className={cn(
+                            'absolute inset-0 transition-all duration-300',
+                            isDark ? '-rotate-90 opacity-0' : 'rotate-0 opacity-100',
+                          )}
+                        >
+                          <SunIcon className="h-5 w-5" />
+                        </div>
+                      </div>
+                    </button>
+                  )}
+                  <LanguageSwitcher />
                 </div>
               </div>
 

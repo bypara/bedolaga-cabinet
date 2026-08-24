@@ -4,7 +4,12 @@ import { useQuery } from '@tanstack/react-query';
 import { infoApi } from '@/api/info';
 import { ChevronDownIcon } from '@/components/icons';
 
-export default function LanguageSwitcher() {
+interface LanguageSwitcherProps {
+  sidebar?: boolean;
+  expanded?: boolean;
+}
+
+export default function LanguageSwitcher({ sidebar = false, expanded = false }: LanguageSwitcherProps) {
   const { i18n } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -44,25 +49,43 @@ export default function LanguageSwitcher() {
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className={sidebar ? 'relative w-full' : 'relative'} ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-sm transition-all ${
+        className={`flex items-center rounded-xl text-sm transition-all ${
+          sidebar
+            ? `h-11 w-full ${expanded ? 'justify-start gap-3 px-3' : 'justify-center px-0'}`
+            : 'gap-1.5 border px-2.5 py-2'
+        } ${
           isOpen
-            ? 'border-dark-600 bg-dark-700'
-            : 'border-dark-700/50 bg-dark-800/50 hover:border-dark-600 hover:bg-dark-700'
+            ? sidebar
+              ? 'bg-dark-800 text-accent-400'
+              : 'border-dark-600 bg-dark-700'
+            : sidebar
+              ? 'text-dark-400 hover:bg-dark-800 hover:text-dark-100'
+              : 'border-dark-700/50 bg-dark-800/50 hover:border-dark-600 hover:bg-dark-700'
         }`}
         aria-label="Change language"
       >
         <span>{currentLang.flag}</span>
-        <span className="font-medium text-dark-200">{currentLang.code.toUpperCase()}</span>
-        <ChevronDownIcon
-          className={`h-3.5 w-3.5 text-dark-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-        />
+        {(!sidebar || expanded) && (
+          <>
+            <span className="min-w-0 flex-1 truncate text-left font-medium text-dark-200">
+              {currentLang.name || currentLang.code.toUpperCase()}
+            </span>
+            <ChevronDownIcon
+              className={`h-3.5 w-3.5 flex-none text-dark-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            />
+          </>
+        )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-40 animate-fade-in rounded-xl border border-dark-700/50 bg-dark-800 py-1 shadow-lg">
+        <div
+          className={`absolute z-50 w-40 animate-fade-in rounded-xl border border-dark-700/50 bg-dark-800 py-1 shadow-lg ${
+            sidebar ? 'bottom-0 left-full ml-3' : 'right-0 mt-2'
+          }`}
+        >
           {availableLanguages.map((lang) => (
             <button
               key={lang.code}

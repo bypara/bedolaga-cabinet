@@ -10,6 +10,7 @@ import { infoPagesApi } from '../api/infoPages';
 import { promoApi, type LoyaltyTierInfo } from '../api/promo';
 import type { FaqItem, ReplacesTab } from '../api/infoPages';
 import { DocumentIcon, InfoIcon, QuestionIcon, ShieldIcon, StarIcon } from '@/components/icons';
+import { WebBackButton } from '../components/WebBackButton';
 
 const ChevronIcon = ({ expanded }: { expanded: boolean }) => (
   <PiCaretDown className={`h-5 w-5 transition-transform ${expanded ? 'rotate-180' : ''}`} />
@@ -311,41 +312,51 @@ export default function Info() {
   const { data: faqPages, isLoading: faqLoading } = useQuery({
     queryKey: ['faq-pages'],
     queryFn: infoApi.getFaqPages,
-    enabled: activeTab === 'faq' && !currentTabSlug && replacementsLoaded,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    enabled:
+      replacementsLoaded &&
+      visibility !== undefined &&
+      visibility.faq &&
+      !tabReplacements?.faq,
+    staleTime: 60_000,
   });
 
   const { data: rules, isLoading: rulesLoading } = useQuery({
     queryKey: ['rules'],
     queryFn: infoApi.getRules,
-    enabled: activeTab === 'rules' && !currentTabSlug && replacementsLoaded,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    enabled:
+      replacementsLoaded &&
+      visibility !== undefined &&
+      visibility.rules &&
+      !tabReplacements?.rules,
+    staleTime: 60_000,
   });
 
   const { data: privacy, isLoading: privacyLoading } = useQuery({
     queryKey: ['privacy-policy'],
     queryFn: infoApi.getPrivacyPolicy,
-    enabled: activeTab === 'privacy' && !currentTabSlug && replacementsLoaded,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    enabled:
+      replacementsLoaded &&
+      visibility !== undefined &&
+      visibility.privacy &&
+      !tabReplacements?.privacy,
+    staleTime: 60_000,
   });
 
   const { data: offer, isLoading: offerLoading } = useQuery({
     queryKey: ['public-offer'],
     queryFn: infoApi.getPublicOffer,
-    enabled: activeTab === 'offer' && !currentTabSlug && replacementsLoaded,
-    staleTime: 0,
-    refetchOnMount: 'always',
+    enabled:
+      replacementsLoaded &&
+      visibility !== undefined &&
+      visibility.offer &&
+      !tabReplacements?.offer,
+    staleTime: 60_000,
   });
 
   const { data: loyaltyData, isLoading: loyaltyLoading } = useQuery({
     queryKey: ['loyalty-tiers'],
     queryFn: promoApi.getLoyaltyTiers,
-    enabled: activeTab === 'loyalty',
-    staleTime: 0,
-    refetchOnMount: 'always',
+    staleTime: 60_000,
   });
 
   const tabs = useMemo(() => {
@@ -358,10 +369,22 @@ export default function Info() {
     ];
 
     const visibleBuiltinTabs = builtinTabs.filter((tab) => {
-      if (tab.id === 'loyalty') return true;
+      if (tab.id === 'loyalty') return (loyaltyData?.tiers.length ?? 0) > 0;
       if (tabReplacements?.[tab.id as ReplacesTab]) return true;
-      if (!visibility) return true;
-      return visibility[tab.id as keyof InfoVisibility];
+      if (!visibility?.[tab.id as keyof InfoVisibility]) return false;
+
+      switch (tab.id) {
+        case 'faq':
+          return (faqPages?.length ?? 0) > 0;
+        case 'rules':
+          return Boolean(rules?.content.trim() && rules.updated_at);
+        case 'privacy':
+          return Boolean(privacy?.content.trim() && privacy.updated_at);
+        case 'offer':
+          return Boolean(offer?.content.trim() && offer.updated_at);
+        default:
+          return false;
+      }
     });
 
     const customTabs = extraPages.map((p) => {
@@ -370,7 +393,18 @@ export default function Info() {
     });
 
     return [...visibleBuiltinTabs, ...customTabs];
-  }, [visibility, tabReplacements, extraPages, locale, t]);
+  }, [
+    visibility,
+    tabReplacements,
+    extraPages,
+    locale,
+    t,
+    faqPages,
+    rules,
+    privacy,
+    offer,
+    loyaltyData,
+  ]);
 
   useEffect(() => {
     if (tabs.length === 0) return;
@@ -743,30 +777,48 @@ export default function Info() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <InfoIcon className="h-6 w-6" />
+        <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+        <InfoIcon className="hidden h-6 w-6 sm:block" />
         <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('info.title')}</h1>
       </div>
 
       {/* Tabs */}
-      <div className="scrollbar-hide flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-x-visible">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
-              activeTab === tab.id
-                ? 'bg-accent-500 text-on-accent'
-                : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
-            }`}
-          >
-            {tab.emoji ? <span className="text-base">{tab.emoji}</span> : <tab.icon />}
-            <span className="max-w-[140px] truncate">{tab.label}</span>
-          </button>
-        ))}
-      </div>
+      {tabs.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex min-h-[44px] max-w-full items-center gap-2 rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-accent-500 text-on-accent'
+                  : 'bg-dark-800 text-dark-300 hover:bg-dark-700'
+              }`}
+            >
+              {tab.emoji ? <span className="text-base">{tab.emoji}</span> : <tab.icon />}
+              <span className="min-w-0 whitespace-normal break-words">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Content */}
-      {renderContent()}
+      {tabs.length > 0 ? (
+        renderContent()
+      ) : !replacementsLoaded ||
+        visibility === undefined ||
+        customPages === undefined ||
+        faqLoading ||
+        rulesLoading ||
+        privacyLoading ||
+        offerLoading ||
+        loyaltyLoading ? (
+        <div className="flex justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent-500 border-t-transparent" />
+        </div>
+      ) : (
+        <div className="py-8 text-center text-dark-400">{t('info.noContent')}</div>
+      )}
     </div>
   );
 }

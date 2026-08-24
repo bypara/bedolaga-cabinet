@@ -1,16 +1,13 @@
+import { ChevronRightIcon, RefreshIcon } from '@/components/icons';
 import { uiLocale } from '@/utils/uiLocale';
+import type { UseMutationResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
-import type { UseMutationResult } from '@tanstack/react-query';
-import TrafficProgressBar from './TrafficProgressBar';
-import Sparkline from './Sparkline';
 import ConnectDeviceTile from './ConnectDeviceTile';
-import { useAnimatedNumber } from '../../hooks/useAnimatedNumber';
 import { useTheme } from '../../hooks/useTheme';
 import { useTrafficZone } from '../../hooks/useTrafficZone';
 import { formatTraffic } from '../../utils/formatTraffic';
 import { getGlassColors } from '../../utils/glassTheme';
-import { CalendarIcon, RefreshIcon } from '@/components/icons';
 import type { Subscription } from '../../types';
 
 interface SubscriptionCardActiveProps {
@@ -40,234 +37,114 @@ export default function SubscriptionCardActive({
   const usedGb = trafficData?.traffic_used_gb ?? subscription.traffic_used_gb;
   const isUnlimited = trafficData?.is_unlimited ?? subscription.traffic_limit_gb === 0;
   const zone = useTrafficZone(usedPercent);
-  const animatedPercent = useAnimatedNumber(usedPercent);
-
-  const formattedDate = new Date(subscription.end_date).toLocaleDateString(uiLocale());
+  const formattedDate = new Date(subscription.end_date).toLocaleDateString(uiLocale(), {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
   const daysLeft = subscription.days_left;
-
-  // Sparkline placeholder data (hidden until API provides daily usage)
-  const dailyUsage: number[] = [];
+  const isExpiringSoon = daysLeft <= 14;
 
   return (
-    <div
-      className="relative overflow-hidden rounded-3xl lg:backdrop-blur-xl"
+    <section
+      className="relative overflow-hidden rounded-3xl p-5 sm:p-6 lg:backdrop-blur-xl"
       style={{
         background: g.cardBg,
-        border: subscription.is_trial
-          ? '1px solid rgba(var(--color-accent-400), 0.15)'
-          : isDark
-            ? `1px solid ${g.cardBorder}`
-            : `1px solid rgba(${zone.mainVarRaw}, 0.14)`,
-        padding: '28px 28px 24px',
-        boxShadow: isDark
-          ? g.shadow
-          : `0 2px 16px rgba(${zone.mainVarRaw}, 0.07), 0 0 0 1px rgba(${zone.mainVarRaw}, 0.03)`,
+        border: `1px solid ${g.cardBorder}`,
+        boxShadow: g.shadow,
       }}
+      aria-labelledby="current-subscription-title"
     >
-      {/* Decorative trial-shimmer border + ambient background glow removed.
-          Trial state is conveyed by the badge in the header; ambient glow
-          carried no information and ate visual attention. */}
-
-      {/* ─── Header ─── */}
-      <div className="mb-7 flex items-start justify-between">
-        <div>
-          {/* Zone indicator */}
-          <div className="mb-1 flex items-center gap-2">
-            <div
-              className="h-2 w-2 rounded-full"
-              style={{
-                background: zone.mainVar,
-                transition: 'background 0.6s ease',
-              }}
-              aria-hidden="true"
-            />
-            <span
-              className="font-mono text-[11px] font-semibold uppercase tracking-widest"
-              style={{ color: zone.mainVar, transition: 'color 0.6s ease' }}
-            >
-              {isUnlimited ? t('dashboard.unlimited') : t(zone.labelKey)}
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-500/10 px-2.5 py-1 text-[11px] font-semibold text-success-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-success-400" aria-hidden="true" />
+              {t('subscription.active')}
             </span>
             {subscription.is_trial && (
-              <span className="inline-flex items-center gap-1 rounded-md border border-accent-400/25 bg-accent-400/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-widest text-accent-400">
-                <svg
-                  width="10"
-                  height="10"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+              <span className="rounded-full bg-accent-500/10 px-2.5 py-1 text-[11px] font-semibold text-accent-400">
                 {t('subscription.trialStatus')}
               </span>
             )}
           </div>
-
-          {/* Title */}
-          <h2 className="text-lg font-bold tracking-tight text-dark-50">
-            {t('dashboard.trafficUsageTitle')}
-          </h2>
-        </div>
-
-        {/* Big percentage / infinity */}
-        <div className="text-right">
-          {isUnlimited ? (
-            <>
-              <div
-                className="font-display text-[28px] font-extrabold leading-none tracking-tight"
-                style={{ color: zone.mainVar }}
-              >
-                &#8734;
-              </div>
-              <div className="mt-1 font-mono text-[11px] text-dark-50/30">
-                {formatTraffic(usedGb)} {t('dashboard.usedSuffix')}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="font-display text-[38px] font-extrabold leading-none tracking-tight text-dark-50">
-                {animatedPercent.toFixed(0)}
-                <span className="ml-px text-lg font-medium text-dark-50/35">%</span>
-              </div>
-              <div className="mt-0.5 font-mono text-[11px] text-dark-50/30">
-                {formatTraffic(usedGb)} / {formatTraffic(subscription.traffic_limit_gb)}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* ─── Progress Bar ─── */}
-      <div className="mb-6">
-        <TrafficProgressBar
-          usedGb={usedGb}
-          limitGb={subscription.traffic_limit_gb}
-          percent={usedPercent}
-          isUnlimited={isUnlimited}
-        />
-      </div>
-
-      {/* ─── Connect Device Button ─── */}
-      <ConnectDeviceTile
-        subscription={subscription}
-        connectedDevices={connectedDevices}
-        usedPercent={usedPercent}
-      />
-
-      {/* ─── Stats row: Tariff + Days Left ─── */}
-      <div className="mb-5 flex gap-2.5">
-        {/* Tariff badge — clickable. Neutral chrome: the tariff name has
-            no traffic-zone semantics, so tinting it by the traffic zone
-            (DESIGN.md Status-Hue Lockout) was wrong. */}
-        <Link
-          to={`/subscriptions/${subscription.id}`}
-          className="flex-1 rounded-[14px] p-3.5 transition-colors"
-          style={{
-            background: g.innerBg,
-            border: `1px solid ${g.innerBorder}`,
-          }}
-        >
-          <div
-            className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider"
-            style={{ color: g.textFaint }}
+          <h2
+            id="current-subscription-title"
+            className="truncate text-xl font-bold tracking-tight text-dark-50"
           >
-            {t('dashboard.tariff')}
-          </div>
-          <div className="min-w-0 truncate text-base font-bold leading-tight tracking-tight text-dark-50">
             {subscription.tariff_name || t('subscription.currentPlan')}
-          </div>
-          <div className="mt-0.5 font-mono text-[10px] text-dark-50/30">
-            {t('dashboard.validUntil', { date: formattedDate })}
-          </div>
-        </Link>
-
-        {/* Days remaining */}
-        <div
-          className="flex-1 rounded-[14px] p-3.5 transition-colors duration-300"
-          style={{
-            background: g.innerBg,
-            border:
-              daysLeft <= 3
-                ? '1px solid rgba(var(--color-warning-400), 0.2)'
-                : `1px solid ${g.innerBorder}`,
-          }}
-        >
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-dark-50/35">
-            <div
-              className="flex h-6 w-6 items-center justify-center rounded-[7px] transition-colors duration-300"
-              style={{
-                background: daysLeft <= 3 ? 'rgba(var(--color-warning-400), 0.1)' : g.hoverBg,
-              }}
-            >
-              <span
-                style={{
-                  color: daysLeft <= 3 ? 'rgb(var(--color-warning-400))' : g.textSecondary,
-                }}
-                aria-hidden="true"
-              >
-                <CalendarIcon className="h-[13px] w-[13px]" />
-              </span>
-            </div>
-            {t('dashboard.remaining')}
-          </div>
-          <div className="flex items-baseline gap-1">
-            <span
-              className="text-[22px] font-bold tracking-tight transition-colors duration-300"
-              style={{ color: daysLeft <= 3 ? 'rgb(var(--color-warning-400))' : g.text }}
-            >
-              {daysLeft}
-            </span>
-            <span className="text-xs font-medium text-dark-50/25">
-              {t('subscription.daysShort')}
-            </span>
-          </div>
+          </h2>
+          <p
+            className={`mt-1 text-sm ${isExpiringSoon ? 'text-warning-400' : 'text-dark-400'}`}
+          >
+            {t('dashboard.activeUntil')} {formattedDate}
+            {isExpiringSoon && ` · ${daysLeft} ${t('subscription.daysShort')}`}
+          </p>
         </div>
-      </div>
 
-      {/* ─── Traffic Refresh ─── */}
-      <div className="mb-5 flex items-center justify-between px-0.5">
-        <button
-          onClick={() => refreshTrafficMutation.mutate()}
-          disabled={refreshTrafficMutation.isPending || trafficRefreshCooldown > 0}
-          className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium text-dark-50/35 transition-colors hover:bg-dark-50/[0.05] hover:text-dark-50/50 disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label={t('common.refresh')}
-        >
-          <RefreshIcon
-            className={`h-3 w-3 ${refreshTrafficMutation.isPending ? 'animate-spin' : ''}`}
-          />
-          {trafficRefreshCooldown > 0 ? `${trafficRefreshCooldown}s` : t('common.refresh')}
-        </button>
         <Link
           to={`/subscriptions/${subscription.id}`}
-          className="text-[11px] font-medium text-dark-50/25 transition-colors hover:text-dark-50/40"
+          className="flex min-h-10 flex-none items-center gap-1 rounded-xl border border-dark-700/80 px-3 text-xs font-medium text-dark-300 transition-colors hover:border-dark-600 hover:bg-dark-800 hover:text-dark-100"
         >
-          {t('dashboard.viewSubscription')} &rarr;
+          {t('dashboard.viewSubscription')}
+          <ChevronRightIcon className="h-3.5 w-3.5" />
         </Link>
       </div>
 
-      {/* ─── Sparkline ─── */}
-      {dailyUsage.length >= 2 && (
-        <div
-          className="rounded-[14px] p-3.5 pb-3"
-          style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
-        >
-          <div className="mb-2.5 flex items-center justify-between">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-dark-50/40">
-              {t('dashboard.usageLast14Days')}
-            </span>
-            <span className="font-mono text-[11px] text-dark-50/25">
-              {t('dashboard.maxUsage', { amount: formatTraffic(Math.max(...dailyUsage)) })}
-            </span>
+      <ConnectDeviceTile subscription={subscription} connectedDevices={connectedDevices} />
+
+      <div
+        className="mt-3 rounded-2xl p-4"
+        style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
+      >
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-medium text-dark-400">{t('dashboard.trafficUsageTitle')}</p>
+            <p className="mt-1 text-sm font-semibold text-dark-100">
+              {isUnlimited
+                ? `${formatTraffic(usedGb)} · ${t('dashboard.unlimited')}`
+                : `${formatTraffic(usedGb)} / ${formatTraffic(subscription.traffic_limit_gb)}`}
+            </p>
           </div>
-          <Sparkline data={dailyUsage} width={440} height={44} color={zone.mainVar} />
+          <button
+            type="button"
+            onClick={() => refreshTrafficMutation.mutate()}
+            disabled={refreshTrafficMutation.isPending || trafficRefreshCooldown > 0}
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-dark-500 transition-colors hover:bg-dark-700/70 hover:text-dark-200 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={t('common.refresh')}
+            title={trafficRefreshCooldown > 0 ? `${trafficRefreshCooldown}s` : t('common.refresh')}
+          >
+            <RefreshIcon
+              className={`h-4 w-4 ${refreshTrafficMutation.isPending ? 'animate-spin' : ''}`}
+            />
+          </button>
         </div>
+
+        {!isUnlimited && (
+          <div
+            className="h-2 overflow-hidden rounded-full bg-dark-700/70"
+            role="progressbar"
+            aria-label={t('dashboard.trafficUsageTitle')}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(usedPercent)}
+          >
+            <div
+              className="h-full rounded-full transition-[width,background] duration-500"
+              style={{ width: `${Math.min(100, usedPercent)}%`, background: zone.mainVar }}
+            />
+          </div>
+        )}
+      </div>
+
+      {isExpiringSoon && (
+        <Link
+          to="/subscription/purchase"
+          className="mt-3 flex min-h-12 w-full items-center justify-center rounded-xl bg-warning-500/15 px-4 text-sm font-semibold text-warning-400 transition-colors hover:bg-warning-500/20"
+        >
+          {t('subscription.extend')}
+        </Link>
       )}
-    </div>
+    </section>
   );
 }

@@ -21,11 +21,25 @@ import { promoApi } from '../api/promo';
 import PendingGiftCard from '../components/dashboard/PendingGiftCard';
 import SubscriptionListCard from '../components/subscription/SubscriptionListCard';
 import { DeviceLimitSheet } from '../components/subscription/DeviceLimitSheet';
+import EmailLinkReminder from '../components/EmailLinkReminder';
 import { API } from '../config/constants';
-import { ChevronRightIcon, StarIcon } from '@/components/icons';
+import { useCurrency } from '../hooks/useCurrency';
+import { useFeatureFlags } from '../hooks/useFeatureFlags';
+import { cn } from '@/lib/utils';
+import {
+  AgentIcon,
+  ChevronRightIcon,
+  GiftIcon,
+  InfoIcon,
+  StarIcon,
+  UsersIcon,
+  WalletIcon,
+} from '@/components/icons';
 
 export default function Dashboard() {
   const { t } = useTranslation();
+  const { formatAmount, currencySymbol } = useCurrency();
+  const { giftEnabled } = useFeatureFlags();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const refreshUser = useAuthStore((state) => state.refreshUser);
@@ -282,30 +296,101 @@ export default function Dashboard() {
   };
 
   const userName = displayName(user);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div data-onboarding="welcome">
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">
-          {userName ? t('dashboard.welcome', { name: userName }) : t('dashboard.welcomeNoName')}
-        </h1>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <p className="text-dark-400">{t('dashboard.yourSubscription')}</p>
-          {promoGroupData?.group_name && (
-            <span
-              className="inline-flex max-w-[160px] items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
-              style={{
-                background: 'rgba(var(--color-accent-400), 0.1)',
-                border: '1px solid rgba(var(--color-accent-400), 0.2)',
-                color: 'rgb(var(--color-accent-400))',
-              }}
-            >
-              <StarIcon filled className="h-2.5 w-2.5 shrink-0" />
-              <span className="truncate">{promoGroupData.group_name}</span>
+      <div className="flex items-end justify-between gap-4" data-onboarding="welcome">
+        <div className="min-w-0">
+          <p className="hidden text-sm text-dark-500 lg:block">{t('dashboard.title')}</p>
+          <h1 className="mt-0.5 truncate text-xl font-bold text-dark-50 sm:text-2xl">
+            <span className="lg:hidden">{t('nav.dashboard')}</span>
+            <span className="hidden lg:inline">
+              {userName
+                ? t('dashboard.welcome', { name: userName })
+                : t('dashboard.welcomeNoName')}
             </span>
-          )}
+          </h1>
         </div>
+        {promoGroupData?.group_name && (
+          <span
+            className="mb-0.5 inline-flex max-w-[140px] flex-none items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            style={{
+              background: 'rgba(var(--color-accent-400), 0.1)',
+              border: '1px solid rgba(var(--color-accent-400), 0.2)',
+              color: 'rgb(var(--color-accent-400))',
+            }}
+          >
+            <StarIcon filled className="h-2.5 w-2.5 shrink-0" />
+            <span className="truncate">{promoGroupData.group_name}</span>
+          </span>
+        )}
+      </div>
+
+      <EmailLinkReminder />
+
+      {/* Mobile dashboard is the navigation: large targets replace the crowded bottom bar. */}
+      <div className="grid grid-cols-2 gap-3 lg:hidden">
+        <Link
+          to="/balance"
+          data-onboarding="balance"
+          className="flex min-h-28 flex-col justify-between rounded-3xl border border-dark-700/70 bg-dark-900/70 p-4 transition-colors active:bg-dark-800"
+        >
+          <span className="text-lg font-semibold text-dark-100">
+            {formatAmount(balanceData?.balance_rubles || 0)} {currencySymbol}
+          </span>
+          <span className="flex items-end justify-between gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-dark-800 text-dark-400">
+              <WalletIcon className="h-5 w-5" />
+            </span>
+            <span className="text-xs font-medium text-dark-500">{t('nav.balance')}</span>
+          </span>
+        </Link>
+
+        <Link
+          to="/referral"
+          className="flex min-h-28 flex-col justify-between rounded-3xl border border-dark-700/70 bg-dark-900/70 p-4 transition-colors active:bg-dark-800"
+        >
+          <span className="text-lg font-semibold text-dark-100">
+            {referralInfo?.total_referrals || 0}
+          </span>
+          <span className="flex items-end justify-between gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-dark-800 text-dark-400">
+              <UsersIcon className="h-5 w-5" />
+            </span>
+            <span className="text-xs font-medium text-dark-500">{t('nav.referral')}</span>
+          </span>
+        </Link>
+      </div>
+
+      <div
+        className={cn(
+          'grid gap-3 lg:hidden',
+          giftEnabled ? 'grid-cols-3' : 'grid-cols-2',
+        )}
+      >
+        <Link
+          to="/support"
+          className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-dark-700/70 bg-dark-900/55 px-2 py-3 text-center transition-colors active:bg-dark-800"
+        >
+          <AgentIcon className="h-5 w-5 text-accent-400" />
+          <span className="text-xs font-medium text-dark-300">{t('nav.support')}</span>
+        </Link>
+        {giftEnabled && (
+          <Link
+            to="/gift"
+            className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-dark-700/70 bg-dark-900/55 px-2 py-3 text-center transition-colors active:bg-dark-800"
+          >
+            <GiftIcon className="h-5 w-5 text-accent-400" />
+            <span className="text-xs font-medium text-dark-300">{t('nav.gift')}</span>
+          </Link>
+        )}
+        <Link
+          to="/info"
+          className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-dark-700/70 bg-dark-900/55 px-2 py-3 text-center transition-colors active:bg-dark-800"
+        >
+          <InfoIcon className="h-5 w-5 text-accent-400" />
+          <span className="text-xs font-medium text-dark-300">{t('nav.info')}</span>
+        </Link>
       </div>
 
       {/* Pending Gift Activations */}
@@ -427,12 +512,14 @@ export default function Dashboard() {
       <PromoOffersSection />
 
       {/* Stats Grid */}
-      <StatsGrid
-        balanceRubles={balanceData?.balance_rubles || 0}
-        referralCount={referralInfo?.total_referrals || 0}
-        earningsRubles={referralInfo?.available_balance_rubles || 0}
-        refLoading={refLoading}
-      />
+      <div className="hidden lg:block">
+        <StatsGrid
+          balanceRubles={balanceData?.balance_rubles || 0}
+          referralCount={referralInfo?.total_referrals || 0}
+          earningsRubles={referralInfo?.available_balance_rubles || 0}
+          refLoading={refLoading}
+        />
+      </div>
 
       {/* Fortune Wheel Banner */}
       {wheelConfig?.is_enabled && (

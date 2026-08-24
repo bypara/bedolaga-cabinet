@@ -48,6 +48,22 @@ export function TariffPickerGrid({
   const { formatAmount, currencySymbol } = useCurrency();
   const { applyPromoDiscount } = usePromoDiscount();
 
+  const hasPromoGroupDiscount = tariffs.some(
+    (tariff) =>
+      tariff.promo_group_name &&
+      ((tariff.daily_discount_percent ?? 0) > 0 ||
+        (tariff.device_discount_percent ?? 0) > 0 ||
+        (tariff.custom_days_discount_percent ?? 0) > 0 ||
+        (tariff.original_daily_price_kopeks ?? 0) > (tariff.daily_price_kopeks ?? 0) ||
+        (tariff.original_device_price_kopeks ?? 0) > (tariff.device_price_kopeks ?? 0) ||
+        (tariff.original_price_per_day_kopeks ?? 0) > (tariff.price_per_day_kopeks ?? 0) ||
+        tariff.periods.some(
+          (period) =>
+            (period.discount_percent ?? 0) > 0 ||
+            (period.original_price_kopeks ?? 0) > period.price_kopeks,
+        )),
+  );
+
   const formatPrice = (kopeks: number) =>
     kopeks === 0
       ? t('subscription.free', 'Бесплатно')
@@ -56,7 +72,7 @@ export function TariffPickerGrid({
   return (
     <>
       {/* Promo group discount banner */}
-      {tariffs.some((tariff) => tariff.promo_group_name) && (
+      {hasPromoGroupDiscount && (
         <div className="mb-4 flex items-center gap-3 rounded-xl border border-success-500/30 bg-success-500/10 p-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success-500/20 text-success-400">
             <svg

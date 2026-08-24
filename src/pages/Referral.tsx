@@ -10,6 +10,7 @@ import { partnerApi } from '../api/partners';
 import { withdrawalApi } from '../api/withdrawals';
 import { CampaignCard } from '../components/partner/CampaignCard';
 import { useCurrency } from '../hooks/useCurrency';
+import { WebBackButton } from '../components/WebBackButton';
 import { StatCard } from '@/components/stats';
 import {
   ArrowDownIcon,
@@ -140,9 +141,12 @@ export default function Referral() {
     const gridCols = gridColsMap[cardCount] ?? 'md:grid-cols-4';
 
     return (
-      <div className="bento-card">
-        <h2 className="mb-4 text-lg font-semibold text-dark-100">{t('referral.terms.title')}</h2>
-        <div className={`grid grid-cols-2 gap-4 ${gridCols}`}>
+      <details className="bento-card group">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-dark-100">
+          {t('referral.terms.title')}
+          <span className="text-dark-500 transition-transform group-open:rotate-180">⌄</span>
+        </summary>
+        <div className={`mt-4 grid grid-cols-2 gap-3 ${gridCols}`}>
           <StatCard
             label={t('referral.terms.commission')}
             value={`${terms.commission_percent}%`}
@@ -172,7 +176,7 @@ export default function Referral() {
             />
           )}
         </div>
-      </div>
+      </details>
     );
   }, [terms, t, formatAmount, formatPositive, currencySymbol]);
 
@@ -225,13 +229,16 @@ export default function Referral() {
   // Show disabled state if referral program is disabled
   if (terms && !terms.is_enabled) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-dark-800">
-          <UsersIcon className="h-12 w-12 text-dark-500" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+          <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+          <h1 className="text-xl font-bold text-dark-50 sm:text-2xl">{t('referral.title')}</h1>
         </div>
-        <div className="text-center">
-          <h1 className="mb-2 text-2xl font-bold text-dark-100">{t('referral.title')}</h1>
-          <p className="text-dark-400">{t('referral.disabled')}</p>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-6">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-dark-800">
+            <UsersIcon className="h-12 w-12 text-dark-500" />
+          </div>
+          <p className="text-center text-dark-400">{t('referral.disabled')}</p>
         </div>
       </div>
     );
@@ -244,12 +251,15 @@ export default function Referral() {
   const showRejectedSection = partnerStatusValue === 'rejected';
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('referral.title')}</h1>
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+        <h1 className="text-xl font-bold text-dark-50 sm:text-2xl">{t('referral.title')}</h1>
+      </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-        <div className="col-span-2 md:col-span-1">
+      <div className="grid grid-cols-3 gap-2.5 md:gap-4">
+        <div>
           <StatCard
             label={t('referral.stats.totalReferrals')}
             value={info?.total_referrals || 0}
@@ -274,7 +284,7 @@ export default function Referral() {
 
       {/* Referral Links */}
       <div className="bento-card">
-        <h2 className="mb-4 text-lg font-semibold text-dark-100">{t('referral.yourLink')}</h2>
+        <h2 className="mb-4 text-base font-semibold text-dark-100">{t('referral.yourLink')}</h2>
         <div className="space-y-3">
           {/* Bot link */}
           {botReferralLink && (
@@ -348,10 +358,16 @@ export default function Referral() {
       {programTerms}
 
       {/* Referrals List */}
-      <div className="bento-card">
-        <h2 className="mb-4 text-lg font-semibold text-dark-100">{t('referral.yourReferrals')}</h2>
+      <details className="bento-card group">
+        <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-dark-100">
+          <span>{t('referral.yourReferrals')}</span>
+          <span className="flex items-center gap-2 text-sm font-normal text-dark-500">
+            {referralList?.items?.length || 0}
+            <span className="transition-transform group-open:rotate-180">⌄</span>
+          </span>
+        </summary>
         {referralList?.items && referralList.items.length > 0 ? (
-          <div className="space-y-3">
+          <div className="mt-4 space-y-2">
             {referralList.items.map((ref) => (
               <div
                 key={ref.id}
@@ -381,15 +397,19 @@ export default function Referral() {
             <div className="text-dark-400">{t('referral.noReferrals')}</div>
           </div>
         )}
-      </div>
+      </details>
 
       {/* Earnings History */}
       {earnings?.items && earnings.items.length > 0 && (
-        <div className="bento-card">
-          <h2 className="mb-4 text-lg font-semibold text-dark-100">
-            {t('referral.earningsHistory')}
-          </h2>
-          <div className="space-y-3">
+        <details className="bento-card group">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-dark-100">
+            <span>{t('referral.earningsHistory')}</span>
+            <span className="flex items-center gap-2 text-sm font-normal text-dark-500">
+              {earnings.items.length}
+              <span className="transition-transform group-open:rotate-180">⌄</span>
+            </span>
+          </summary>
+          <div className="mt-4 space-y-2">
             {earnings.items.map((earning) => (
               <div
                 key={earning.id}
@@ -412,7 +432,7 @@ export default function Referral() {
               </div>
             ))}
           </div>
-        </div>
+        </details>
       )}
 
       {/* ==================== Partner Application Section ==================== */}
@@ -547,7 +567,7 @@ export default function Referral() {
       {/* ==================== Withdrawal Section ==================== */}
 
       {withdrawalVisible && (
-        <div id="withdrawal-section" className="space-y-6">
+        <div id="withdrawal-section" className="space-y-5">
           {/* Withdrawal Balance Card */}
           {withdrawalBalance && (
             <div className="bento-card">
@@ -623,12 +643,16 @@ export default function Referral() {
           )}
 
           {/* Withdrawal History */}
-          <div className="bento-card">
-            <h2 className="mb-4 text-lg font-semibold text-dark-100">
-              {t('referral.withdrawal.history')}
-            </h2>
-            {withdrawalHistory?.items && withdrawalHistory.items.length > 0 ? (
-              <div className="space-y-3">
+          {withdrawalHistory?.items && withdrawalHistory.items.length > 0 && (
+          <details className="bento-card group">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-dark-100">
+              <span>{t('referral.withdrawal.history')}</span>
+              <span className="flex items-center gap-2 text-sm font-normal text-dark-500">
+                {withdrawalHistory?.items?.length || 0}
+                <span className="transition-transform group-open:rotate-180">⌄</span>
+              </span>
+            </summary>
+              <div className="mt-4 space-y-2">
                 {withdrawalHistory.items.map((item) => (
                   <div
                     key={item.id}
@@ -670,12 +694,8 @@ export default function Referral() {
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="py-8 text-center">
-                <div className="text-dark-400">{t('referral.withdrawal.noHistory')}</div>
-              </div>
-            )}
-          </div>
+          </details>
+          )}
         </div>
       )}
     </div>

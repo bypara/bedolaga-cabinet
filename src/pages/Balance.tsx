@@ -16,6 +16,7 @@ import { Button } from '@/components/primitives/Button';
 import { ChevronDownIcon, ChevronRightIcon, CreditCardIcon, WalletIcon } from '@/components/icons';
 import { staggerContainer, staggerItem } from '@/components/motion/transitions';
 import { isPaidStatus, isFailedStatus } from '../utils/paymentStatus';
+import { WebBackButton } from '../components/WebBackButton';
 
 export default function Balance() {
   const { t } = useTranslation();
@@ -203,7 +204,10 @@ export default function Balance() {
       animate="animate"
     >
       <motion.div variants={staggerItem}>
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('balance.title')}</h1>
+        <div className="flex items-center gap-3">
+          <WebBackButton to="/" className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden" />
+          <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('balance.title')}</h1>
+        </div>
       </motion.div>
 
       {/* Balance Card — flat surface; the giant numeric carries the

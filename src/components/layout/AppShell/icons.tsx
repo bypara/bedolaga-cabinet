@@ -5,6 +5,7 @@ export {
   WalletIcon,
   UsersIcon,
   ChatIcon,
+  AgentIcon,
   UserIcon,
   LogoutIcon,
   SunIcon,

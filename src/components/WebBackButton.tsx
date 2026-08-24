@@ -7,17 +7,23 @@ interface WebBackButtonProps {
   to: string;
   replace?: boolean;
   className?: string;
+  showInTelegram?: boolean;
 }
 
 /**
  * Back button visible only on web platform.
  * Hidden in Telegram Mini App — native back button handles navigation there.
  */
-export function WebBackButton({ to, replace, className }: WebBackButtonProps) {
+export function WebBackButton({
+  to,
+  replace,
+  className,
+  showInTelegram = false,
+}: WebBackButtonProps) {
   const { platform } = usePlatform();
   const { t } = useTranslation();
 
-  if (platform === 'telegram') return null;
+  if (platform === 'telegram' && !showInTelegram) return null;
 
   return (
     <Link

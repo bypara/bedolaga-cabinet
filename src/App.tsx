@@ -34,6 +34,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { BackgroundHost } from './components/backgrounds/BackgroundHost';
 import { PermissionRoute } from '@/components/auth/PermissionRoute';
 import { saveReturnUrl } from './utils/token';
+import LegalOnboardingGate from './components/LegalOnboardingGate';
 import { useAnalyticsCounters } from './hooks/useAnalyticsCounters';
 import { useSiteVerification } from './hooks/useSiteVerification';
 // Auth pages - load immediately (small)
@@ -183,7 +184,9 @@ function ProtectedRoute({
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  return withLayout ? <Layout>{children}</Layout> : <>{children}</>;
+  return (
+    <LegalOnboardingGate>{withLayout ? <Layout>{children}</Layout> : children}</LegalOnboardingGate>
+  );
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
@@ -205,7 +208,11 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/" replace />;
   }
 
-  return <Layout>{children}</Layout>;
+  return (
+    <LegalOnboardingGate>
+      <Layout>{children}</Layout>
+    </LegalOnboardingGate>
+  );
 }
 
 // Suspense + error boundary wrapper for lazy routes. The boundary lives

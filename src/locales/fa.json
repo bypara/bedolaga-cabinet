@@ -4608,6 +4608,28 @@
     "periodDiscount": "{{days}} روز",
     "noDiscounts": "بدون تخفیف"
   },
+  "legalOnboarding": {
+    "title": "خوش آمدید!",
+    "subtitleWithTrial": "سرویس را امتحان کنید و با امکانات حساب کاربری آشنا شوید.",
+    "subtitle": "پیش از شروع، لطفاً اسناد الزامی را بپذیرید.",
+    "freeTrialTitle": "دوره آزمایشی رایگان",
+    "paidTrialTitle": "دسترسی آزمایشی",
+    "freeTrialPrice": "بدون پرداخت یا تعهد",
+    "paidTrialPrice": "فعال‌سازی — {{price}} ₽",
+    "days_other": "{{count}} روز",
+    "agreementBoth": "من <offer>پیشنهاد عمومی</offer> را می‌پذیرم و تأیید می‌کنم که <privacy>سیاست حفظ حریم خصوصی</privacy> را خوانده‌ام.",
+    "agreementOffer": "من <offer>پیشنهاد عمومی</offer> را می‌پذیرم.",
+    "agreementPrivacy": "تأیید می‌کنم که <privacy>سیاست حفظ حریم خصوصی</privacy> را خوانده‌ام.",
+    "acceptAndTrial": "پذیرش و فعال‌سازی دوره آزمایشی",
+    "acceptAndContinue": "پذیرش و ادامه",
+    "continue": "ورود به حساب کاربری",
+    "consentSaved": "رضایت ذخیره شد",
+    "acceptFailed": "ذخیره رضایت ممکن نشد. دوباره تلاش کنید.",
+    "trialFailed": "رضایت شما ذخیره شد، اما دوره آزمایشی فعال نشد. می‌توانید بدون آن ادامه دهید.",
+    "requiredNotice": "بدون پذیرش اسناد الزامی امکان ادامه استفاده از حساب وجود ندارد.",
+    "loadErrorTitle": "بررسی اسناد ممکن نشد",
+    "loadErrorText": "صفحه را تازه‌سازی کنید یا دوباره تلاش کنید؛ بدون بررسی امکان ادامه وجود ندارد."
+  },
   "onboarding": {
     "skip": "رد کردن",
     "finish": "پایان",

@@ -537,6 +537,12 @@ export interface LegalConsentConfig {
   documents: string[];
 }
 
+export interface UserLegalConsentStatus extends LegalConsentConfig {
+  accepted_documents: string[];
+  missing_documents: string[];
+  has_accepted_all: boolean;
+}
+
 export interface SupportConfig {
   tickets_enabled: boolean;
   support_type: 'tickets' | 'profile' | 'url' | 'both';

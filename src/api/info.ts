@@ -1,5 +1,5 @@
 import apiClient from './client';
-import type { LegalConsentConfig, SupportConfig } from '../types';
+import type { LegalConsentConfig, SupportConfig, UserLegalConsentStatus } from '../types';
 
 export interface FaqPage {
   id: number;
@@ -131,6 +131,25 @@ export const infoApi = {
     const response = await apiClient.get<LegalConsentConfig>('/cabinet/info/legal-consent', {
       params: language ? { language } : undefined,
     });
+    return response.data;
+  },
+
+  getLegalConsentStatus: async (language?: string): Promise<UserLegalConsentStatus> => {
+    const response = await apiClient.get<UserLegalConsentStatus>(
+      '/cabinet/info/legal-consent/status',
+      { params: language ? { language } : undefined },
+    );
+    return response.data;
+  },
+
+  acceptLegalConsent: async (
+    documents: string[],
+    language: string,
+  ): Promise<UserLegalConsentStatus> => {
+    const response = await apiClient.post<UserLegalConsentStatus>(
+      '/cabinet/info/legal-consent/accept',
+      { documents, language },
+    );
     return response.data;
   },
 };

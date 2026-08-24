@@ -4607,6 +4607,28 @@
     "periodDiscount": "{{days}}天",
     "noDiscounts": "无折扣"
   },
+  "legalOnboarding": {
+    "title": "欢迎！",
+    "subtitleWithTrial": "试用服务并了解个人中心的全部功能。",
+    "subtitle": "开始之前，请接受必要文件。",
+    "freeTrialTitle": "免费试用期",
+    "paidTrialTitle": "试用权限",
+    "freeTrialPrice": "无需付款或承诺",
+    "paidTrialPrice": "激活费用 — {{price}} ₽",
+    "days_other": "{{count}} 天",
+    "agreementBoth": "我接受<offer>公开要约</offer>，并确认已阅读<privacy>隐私政策</privacy>。",
+    "agreementOffer": "我接受<offer>公开要约</offer>。",
+    "agreementPrivacy": "我确认已阅读<privacy>隐私政策</privacy>。",
+    "acceptAndTrial": "接受并激活试用",
+    "acceptAndContinue": "接受并继续",
+    "continue": "进入个人中心",
+    "consentSaved": "同意已保存",
+    "acceptFailed": "无法保存您的同意。请重试。",
+    "trialFailed": "同意已保存，但试用未能激活。您可以不使用试用继续。",
+    "requiredNotice": "未接受必要文件，无法继续使用个人中心。",
+    "loadErrorTitle": "无法验证文件",
+    "loadErrorText": "请刷新页面或重试——未经验证无法继续。"
+  },
   "onboarding": {
     "skip": "跳过",
     "finish": "完成",

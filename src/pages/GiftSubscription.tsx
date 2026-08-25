@@ -31,6 +31,7 @@ import { formatPrice } from '../utils/format';
 import { useCurrency } from '../hooks/useCurrency';
 import { usePlatform, useHaptic } from '@/platform';
 import { openPaymentUrl } from '../utils/openPaymentUrl';
+import { WebBackButton } from '../components/WebBackButton';
 import {
   SparklesIcon,
   GiftIcon,
@@ -1337,6 +1338,11 @@ export default function GiftSubscription() {
           transition={{ duration: 0.4 }}
           className="mb-6 flex items-center gap-3"
         >
+          <WebBackButton
+            to="/"
+            showInTelegram
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+          />
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-500/20">
             <GiftIcon className="h-5 w-5 text-accent-400" />
           </div>

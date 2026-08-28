@@ -2,11 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import {
-  tariffsApi,
-  TariffListItem,
-  type TariffMigrationPreview,
-} from '../api/tariffs';
+import { tariffsApi, TariffListItem, type TariffMigrationPreview } from '../api/tariffs';
 import {
   Dialog,
   DialogContent,
@@ -479,8 +475,8 @@ export default function AdminTariffs() {
               {syncTariff ? getLimitsActionLabel(syncTariff, false) : 'Обновить параметры'} подписок
             </DialogTitle>
             <DialogDescription>
-              Тариф «{syncTariff?.name}». Срок, статус, использованный трафик и
-              оплаченные дополнения сохранятся.
+              Тариф «{syncTariff?.name}». Срок, статус, использованный трафик и оплаченные
+              дополнения сохранятся.
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -510,8 +506,7 @@ export default function AdminTariffs() {
             <button
               disabled={!syncTariff || syncLimitsMutation.isPending}
               onClick={() =>
-                syncTariff &&
-                syncLimitsMutation.mutate({ tariffId: syncTariff.id, dryRun: false })
+                syncTariff && syncLimitsMutation.mutate({ tariffId: syncTariff.id, dryRun: false })
               }
               className="rounded-lg bg-accent-500 px-4 py-2 font-medium text-on-accent disabled:opacity-50"
             >
@@ -529,7 +524,8 @@ export default function AdminTariffs() {
           <DialogHeader>
             <DialogTitle>Перенести подписчиков</DialogTitle>
             <DialogDescription>
-              Срок и статус подписок сохранятся. Рекуррентные платежи старого тарифа будут отключены.
+              Срок и статус подписок сохранятся. Рекуррентные платежи старого тарифа будут
+              отключены.
             </DialogDescription>
           </DialogHeader>
           <label className="space-y-2 text-sm text-dark-300">
@@ -546,8 +542,7 @@ export default function AdminTariffs() {
               {localTariffs
                 .filter(
                   (item) =>
-                    item.id !== migrationTariff?.id &&
-                    item.is_daily === migrationTariff?.is_daily,
+                    item.id !== migrationTariff?.id && item.is_daily === migrationTariff?.is_daily,
                 )
                 .map((item) => (
                   <option key={item.id} value={item.id}>
@@ -613,7 +608,9 @@ export default function AdminTariffs() {
                 }
                 className="rounded-lg bg-accent-500 px-4 py-2 font-medium text-on-accent disabled:opacity-50"
               >
-                {migrationMutation.isPending ? 'Переносим…' : `Перенести ${migrationPreview.movable_count}`}
+                {migrationMutation.isPending
+                  ? 'Переносим…'
+                  : `Перенести ${migrationPreview.movable_count}`}
               </button>
             )}
           </DialogFooter>

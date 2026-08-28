@@ -2,7 +2,19 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { tariffsApi, TariffListItem } from '../api/tariffs';
+import {
+  tariffsApi,
+  TariffListItem,
+  type TariffMigrationPreview,
+} from '../api/tariffs';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/primitives/Dialog';
 import { useDestructiveConfirm, useNotify } from '@/platform';
 import { usePlatform } from '../platform/hooks/usePlatform';
 import {
@@ -28,8 +40,10 @@ import {
   GiftIcon,
   GripIcon,
   PlusIcon,
+  RefreshIcon,
   SaveIcon,
   TrashIcon,
+  UsersIcon,
   XIcon,
 } from '@/components/icons';
 
@@ -41,6 +55,19 @@ interface SortableTariffCardProps {
   onDelete: () => void;
   onToggle: () => void;
   onToggleTrial: () => void;
+  onSyncLimits: () => void;
+  onMigrate: () => void;
+}
+
+function getLimitsActionLabel(tariff: TariffListItem, includeCount = true) {
+  const suffix = includeCount ? ` (${tariff.limits_drift_count})` : '';
+  if (tariff.traffic_drift_count > 0 && tariff.devices_drift_count === 0) {
+    return `Обновить трафик${suffix}`;
+  }
+  if (tariff.devices_drift_count > 0 && tariff.traffic_drift_count === 0) {
+    return `Обновить устройства${suffix}`;
+  }
+  return `Обновить параметры${suffix}`;
 }
 
 function SortableTariffCard({
@@ -49,6 +76,8 @@ function SortableTariffCard({
   onDelete,
   onToggle,
   onToggleTrial,
+  onSyncLimits,
+  onMigrate,
 }: SortableTariffCardProps) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -133,6 +162,28 @@ function SortableTariffCard({
                   {t('admin.tariffs.subscriptions', { count: tariff.subscriptions_count })}
                 </span>
               </div>
+              {(tariff.limits_drift_count > 0 || tariff.subscriptions_count > 0) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {tariff.limits_drift_count > 0 && (
+                    <button
+                      onClick={onSyncLimits}
+                      className="inline-flex items-center gap-2 rounded-lg border border-warning-500/30 bg-warning-500/10 px-3 py-2 text-xs font-medium text-warning-300 transition-colors hover:bg-warning-500/20"
+                    >
+                      <RefreshIcon className="h-4 w-4" />
+                      {getLimitsActionLabel(tariff)}
+                    </button>
+                  )}
+                  {tariff.subscriptions_count > 0 && (
+                    <button
+                      onClick={onMigrate}
+                      className="inline-flex items-center gap-2 rounded-lg border border-accent-500/30 bg-accent-500/10 px-3 py-2 text-xs font-medium text-accent-300 transition-colors hover:bg-accent-500/20"
+                    >
+                      <UsersIcon className="h-4 w-4" />
+                      Перенести подписчиков
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2 sm:flex-shrink-0">
@@ -197,6 +248,10 @@ export default function AdminTariffs() {
 
   const [localTariffs, setLocalTariffs] = useState<TariffListItem[]>([]);
   const [orderChanged, setOrderChanged] = useState(false);
+  const [syncTariff, setSyncTariff] = useState<TariffListItem | null>(null);
+  const [migrationTariff, setMigrationTariff] = useState<TariffListItem | null>(null);
+  const [targetTariffId, setTargetTariffId] = useState('');
+  const [migrationPreview, setMigrationPreview] = useState<TariffMigrationPreview | null>(null);
 
   // Queries
   const { data: tariffsData, isLoading } = useQuery({
@@ -266,6 +321,41 @@ export default function AdminTariffs() {
     mutationFn: tariffsApi.toggleTrial,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tariffs'] });
+    },
+  });
+
+  const syncLimitsMutation = useMutation({
+    mutationFn: ({ tariffId, dryRun }: { tariffId: number; dryRun: boolean }) =>
+      tariffsApi.syncLimits(tariffId, dryRun),
+    onSuccess: (data, variables) => {
+      if (!variables.dryRun) {
+        queryClient.invalidateQueries({ queryKey: ['admin-tariffs'] });
+        notify.success(`Параметры обновлены у ${data.updated_count ?? 0} подписок`);
+        setSyncTariff(null);
+      }
+    },
+  });
+
+  const migrationMutation = useMutation({
+    mutationFn: ({
+      sourceId,
+      targetId,
+      dryRun,
+    }: {
+      sourceId: number;
+      targetId: number;
+      dryRun: boolean;
+    }) => tariffsApi.migrateSubscriptions(sourceId, targetId, dryRun),
+    onSuccess: (data, variables) => {
+      if (variables.dryRun) {
+        setMigrationPreview(data);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['admin-tariffs'] });
+        notify.success(`Перенесено подписок: ${data.moved_count}`);
+        setMigrationTariff(null);
+        setTargetTariffId('');
+        setMigrationPreview(null);
+      }
     },
   });
 
@@ -366,12 +456,169 @@ export default function AdminTariffs() {
                   onDelete={() => handleDelete(tariff)}
                   onToggle={() => toggleMutation.mutate(tariff.id)}
                   onToggleTrial={() => toggleTrialMutation.mutate(tariff.id)}
+                  onSyncLimits={() => {
+                    setSyncTariff(tariff);
+                    syncLimitsMutation.mutate({ tariffId: tariff.id, dryRun: true });
+                  }}
+                  onMigrate={() => {
+                    setMigrationTariff(tariff);
+                    setTargetTariffId('');
+                    setMigrationPreview(null);
+                  }}
                 />
               ))}
             </div>
           </SortableContext>
         </DndContext>
       )}
+
+      <Dialog open={syncTariff !== null} onOpenChange={(open) => !open && setSyncTariff(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {syncTariff ? getLimitsActionLabel(syncTariff, false) : 'Обновить параметры'} подписок
+            </DialogTitle>
+            <DialogDescription>
+              Тариф «{syncTariff?.name}». Срок, статус, использованный трафик и
+              оплаченные дополнения сохранятся.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-xl bg-dark-800 p-3">
+              <div className="text-dark-400">Трафик</div>
+              <div className="mt-1 text-lg font-semibold text-dark-100">
+                {syncTariff?.traffic_drift_count ?? 0}
+              </div>
+            </div>
+            <div className="rounded-xl bg-dark-800 p-3">
+              <div className="text-dark-400">Устройства</div>
+              <div className="mt-1 text-lg font-semibold text-dark-100">
+                {syncTariff?.devices_drift_count ?? 0}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-dark-400">
+            Текущая статистика будет повторно проверена сервером непосредственно перед применением.
+          </p>
+          <DialogFooter>
+            <button
+              onClick={() => setSyncTariff(null)}
+              className="rounded-lg px-4 py-2 text-dark-300 hover:bg-dark-800"
+            >
+              Отмена
+            </button>
+            <button
+              disabled={!syncTariff || syncLimitsMutation.isPending}
+              onClick={() =>
+                syncTariff &&
+                syncLimitsMutation.mutate({ tariffId: syncTariff.id, dryRun: false })
+              }
+              className="rounded-lg bg-accent-500 px-4 py-2 font-medium text-on-accent disabled:opacity-50"
+            >
+              {syncLimitsMutation.isPending ? 'Обновляем…' : 'Обновить параметры'}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={migrationTariff !== null}
+        onOpenChange={(open) => !open && setMigrationTariff(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Перенести подписчиков</DialogTitle>
+            <DialogDescription>
+              Срок и статус подписок сохранятся. Рекуррентные платежи старого тарифа будут отключены.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="space-y-2 text-sm text-dark-300">
+            <span>Новый тариф</span>
+            <select
+              value={targetTariffId}
+              onChange={(event) => {
+                setTargetTariffId(event.target.value);
+                setMigrationPreview(null);
+              }}
+              className="w-full rounded-xl border border-dark-700 bg-dark-800 px-3 py-2.5 text-dark-100 outline-none focus:border-accent-500"
+            >
+              <option value="">Выберите тариф</option>
+              {localTariffs
+                .filter(
+                  (item) =>
+                    item.id !== migrationTariff?.id &&
+                    item.is_daily === migrationTariff?.is_daily,
+                )
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          {migrationPreview && (
+            <div className="space-y-2 rounded-xl border border-dark-700 bg-dark-800/60 p-4 text-sm">
+              <div className="flex justify-between">
+                <span className="text-dark-400">Будет перенесено</span>
+                <strong>{migrationPreview.movable_count}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-dark-400">Уже есть целевой тариф</span>
+                <strong>{migrationPreview.conflict_count}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-dark-400">Отключится рекуррентов</span>
+                <strong>{migrationPreview.recurring_cancellations}</strong>
+              </div>
+              {migrationPreview.legacy_device_baselines > 0 && (
+                <p className="pt-2 text-xs text-warning-300">
+                  У {migrationPreview.legacy_device_baselines} подписок старые данные устройств
+                  неоднозначны — их текущие дополнительные слоты будут сохранены.
+                </p>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <button
+              onClick={() => setMigrationTariff(null)}
+              className="rounded-lg px-4 py-2 text-dark-300 hover:bg-dark-800"
+            >
+              Отмена
+            </button>
+            {!migrationPreview ? (
+              <button
+                disabled={!migrationTariff || !targetTariffId || migrationMutation.isPending}
+                onClick={() =>
+                  migrationTariff &&
+                  migrationMutation.mutate({
+                    sourceId: migrationTariff.id,
+                    targetId: Number(targetTariffId),
+                    dryRun: true,
+                  })
+                }
+                className="rounded-lg bg-dark-700 px-4 py-2 font-medium text-dark-100 disabled:opacity-50"
+              >
+                {migrationMutation.isPending ? 'Проверяем…' : 'Проверить перенос'}
+              </button>
+            ) : (
+              <button
+                disabled={migrationPreview.movable_count === 0 || migrationMutation.isPending}
+                onClick={() =>
+                  migrationTariff &&
+                  migrationMutation.mutate({
+                    sourceId: migrationTariff.id,
+                    targetId: Number(targetTariffId),
+                    dryRun: false,
+                  })
+                }
+                className="rounded-lg bg-accent-500 px-4 py-2 font-medium text-on-accent disabled:opacity-50"
+              >
+                {migrationMutation.isPending ? 'Переносим…' : `Перенести ${migrationPreview.movable_count}`}
+              </button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

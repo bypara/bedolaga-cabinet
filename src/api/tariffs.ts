@@ -43,6 +43,9 @@ export interface TariffListItem {
   display_order: number;
   servers_count: number;
   subscriptions_count: number;
+  limits_drift_count: number;
+  traffic_drift_count: number;
+  devices_drift_count: number;
   created_at: string;
 }
 
@@ -204,6 +207,34 @@ export interface TariffStats {
   revenue_rubles: number;
 }
 
+export interface TariffLimitsPreview {
+  tariff_id: number;
+  tariff_name: string;
+  total_subscriptions: number;
+  mismatched_subscriptions: number;
+  traffic_mismatches: number;
+  device_mismatches: number;
+  legacy_device_baselines: number;
+  affected_user_ids: number[];
+  updated_count?: number;
+  panel_sync_started?: boolean;
+}
+
+export interface TariffMigrationPreview {
+  source_tariff_id: number;
+  source_tariff_name: string;
+  target_tariff_id: number;
+  target_tariff_name: string;
+  total_subscriptions: number;
+  movable_count: number;
+  conflict_count: number;
+  recurring_cancellations: number;
+  legacy_device_baselines: number;
+  moved_count: number;
+  panel_sync_started: boolean;
+  conflict_user_ids: number[];
+}
+
 export const tariffsApi = {
   // Get all tariffs
   getTariffs: async (includeInactive = true): Promise<TariffListResponse> => {
@@ -277,6 +308,30 @@ export const tariffsApi = {
   // Get available external squads from Remnawave
   getAvailableExternalSquads: async (): Promise<ExternalSquadInfo[]> => {
     const response = await apiClient.get('/cabinet/admin/tariffs/available-external-squads');
+    return response.data;
+  },
+
+  previewLimits: async (tariffId: number): Promise<TariffLimitsPreview> => {
+    const response = await apiClient.get(`/cabinet/admin/tariffs/${tariffId}/limits-preview`);
+    return response.data;
+  },
+
+  syncLimits: async (tariffId: number, dryRun: boolean): Promise<TariffLimitsPreview> => {
+    const response = await apiClient.post(`/cabinet/admin/tariffs/${tariffId}/sync-limits`, {
+      dry_run: dryRun,
+    });
+    return response.data;
+  },
+
+  migrateSubscriptions: async (
+    sourceTariffId: number,
+    targetTariffId: number,
+    dryRun: boolean,
+  ): Promise<TariffMigrationPreview> => {
+    const response = await apiClient.post(
+      `/cabinet/admin/tariffs/${sourceTariffId}/migrate-subscriptions`,
+      { target_tariff_id: targetTariffId, dry_run: dryRun },
+    );
     return response.data;
   },
 };

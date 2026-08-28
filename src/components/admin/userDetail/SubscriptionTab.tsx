@@ -575,11 +575,9 @@ export function SubscriptionTab(props: SubscriptionTabProps) {
                 >
                   <option value="extend">{t('admin.users.detail.subscription.extend')}</option>
                   <option value="shorten">{t('admin.users.detail.subscription.shorten')}</option>
-                  {userSubscriptions.length <= 1 && (
-                    <option value="change_tariff">
-                      {t('admin.users.detail.subscription.changeTariff')}
-                    </option>
-                  )}
+                  <option value="change_tariff">
+                    {t('admin.users.detail.subscription.changeTariff')}
+                  </option>
                   <option value="cancel">{t('admin.users.detail.subscription.cancel')}</option>
                   <option value="activate">{t('admin.users.detail.subscription.activate')}</option>
                 </select>

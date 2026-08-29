@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { tariffsApi, TariffListItem, type TariffMigrationPreview } from '../api/tariffs';
+import { tariffsApi, type TariffListItem, type TariffMigrationPreview } from '../api/tariffs';
 import {
   Dialog,
   DialogContent,
@@ -53,6 +53,7 @@ interface SortableTariffCardProps {
   onToggleTrial: () => void;
   onSyncLimits: () => void;
   onMigrate: () => void;
+  onViewSubscribers: () => void;
 }
 
 function getLimitsActionLabel(tariff: TariffListItem, includeCount = true) {
@@ -74,6 +75,7 @@ function SortableTariffCard({
   onToggleTrial,
   onSyncLimits,
   onMigrate,
+  onViewSubscribers,
 }: SortableTariffCardProps) {
   const { t } = useTranslation();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -154,9 +156,14 @@ function SortableTariffCard({
                 </span>
                 <span>{t('admin.tariffs.devices', { count: tariff.device_limit })}</span>
                 <span>{t('admin.tariffs.servers', { count: tariff.servers_count })}</span>
-                <span>
+                <button
+                  type="button"
+                  onClick={onViewSubscribers}
+                  className="rounded text-left text-accent-400 underline decoration-accent-500/40 underline-offset-2 transition-colors hover:text-accent-300"
+                  title={t('admin.tariffs.viewSubscribers', 'Показать подписчиков')}
+                >
                   {t('admin.tariffs.subscriptions', { count: tariff.subscriptions_count })}
-                </span>
+                </button>
               </div>
               {(tariff.limits_drift_count > 0 || tariff.subscriptions_count > 0) && (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -461,6 +468,7 @@ export default function AdminTariffs() {
                     setTargetTariffId('');
                     setMigrationPreview(null);
                   }}
+                  onViewSubscribers={() => navigate(`/admin/users?tariff_id=${tariff.id}`)}
                 />
               ))}
             </div>

@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { useCurrency } from '../hooks/useCurrency';
 import { adminUsersApi, type UserListItem } from '../api/adminUsers';
+import { tariffsApi } from '../api/tariffs';
 import { usePlatform } from '../platform/hooks/usePlatform';
 import { StatCard } from '@/components/stats';
 import {
@@ -41,10 +42,34 @@ interface UserRowProps {
   user: UserListItem;
   onClick: () => void;
   formatAmount: (rubAmount: number) => string;
+  tariffFilter: string;
+  subscriptionStatusFilter: string;
 }
 
-function UserRow({ user, onClick, formatAmount }: UserRowProps) {
+function UserRow({
+  user,
+  onClick,
+  formatAmount,
+  tariffFilter,
+  subscriptionStatusFilter,
+}: UserRowProps) {
   const { t } = useTranslation();
+  const matchingSubscription =
+    tariffFilter || subscriptionStatusFilter
+      ? user.subscriptions?.find(
+          (subscription) =>
+            (!tariffFilter || subscription.tariff_id === Number(tariffFilter)) &&
+            (!subscriptionStatusFilter || subscription.status === subscriptionStatusFilter),
+        )
+      : undefined;
+  const displayedSubscriptionStatus = matchingSubscription?.status ?? user.subscription_status;
+  const displayedTariffName = matchingSubscription?.tariff_name ?? user.tariff_name;
+  const subscriptionStatusLabel = displayedSubscriptionStatus
+    ? t(
+        `admin.users.filters.subscription${displayedSubscriptionStatus[0].toUpperCase()}${displayedSubscriptionStatus.slice(1)}`,
+      )
+    : '';
+
   return (
     <div
       onClick={onClick}
@@ -74,25 +99,24 @@ function UserRow({ user, onClick, formatAmount }: UserRowProps) {
         {/* Status badges - wrap on mobile */}
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           {user.status !== 'active' && <StatusBadge status={user.status} />}
-          {user.has_subscription && user.subscription_status && (
+          {user.has_subscription && displayedSubscriptionStatus && (
             <span
               className={`rounded-full border px-2 py-0.5 text-xs ${
-                user.subscription_status === 'active'
+                displayedSubscriptionStatus === 'active'
                   ? 'border-success-500/30 bg-success-500/20 text-success-400'
-                  : user.subscription_status === 'trial'
+                  : displayedSubscriptionStatus === 'trial'
                     ? 'border-accent-500/30 bg-accent-500/20 text-accent-400'
-                    : user.subscription_status === 'limited'
+                    : displayedSubscriptionStatus === 'limited'
                       ? 'border-warning-500/30 bg-warning-500/20 text-warning-400'
                       : 'border-warning-500/30 bg-warning-500/20 text-warning-400'
               }`}
             >
-              {user.subscription_status === 'active'
-                ? t('admin.users.status.subscription')
-                : user.subscription_status === 'trial'
-                  ? t('admin.users.status.trial')
-                  : user.subscription_status === 'limited'
-                    ? t('subscription.trafficLimited')
-                    : t('admin.users.status.expired')}
+              {subscriptionStatusLabel}
+            </span>
+          )}
+          {displayedTariffName && (
+            <span className="max-w-full truncate rounded-full border border-dark-600 bg-dark-700/70 px-2 py-0.5 text-xs text-dark-300">
+              {displayedTariffName}
             </span>
           )}
         </div>
@@ -120,28 +144,64 @@ export default function AdminUsers() {
   const { formatWithCurrency } = useCurrency();
   const navigate = useNavigate();
   const { capabilities } = usePlatform();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState('');
   const [emailSearch, setEmailSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [tariffFilter, setTariffFilter] = useState(() => searchParams.get('tariff_id') ?? '');
+  const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState(
+    () => searchParams.get('subscription_status') ?? '',
+  );
   const [sortBy, setSortBy] = useState<string>('created_at');
   const [offset, setOffset] = useState(0);
 
   const limit = 20;
 
+  useEffect(() => {
+    setTariffFilter(searchParams.get('tariff_id') ?? '');
+    setSubscriptionStatusFilter(searchParams.get('subscription_status') ?? '');
+    setOffset(0);
+  }, [searchParams]);
+
   const usersQuery = useQuery({
-    queryKey: ['admin-users', offset, limit, sortBy, search, emailSearch, statusFilter] as const,
+    queryKey: [
+      'admin-users',
+      offset,
+      limit,
+      sortBy,
+      search,
+      emailSearch,
+      statusFilter,
+      tariffFilter,
+      subscriptionStatusFilter,
+    ] as const,
     queryFn: () => {
       const params: Record<string, unknown> = { offset, limit, sort_by: sortBy };
       if (search) params.search = search;
       if (emailSearch) params.email = emailSearch;
       if (statusFilter) params.status = statusFilter;
+      if (tariffFilter) params.tariff_id = tariffFilter;
+      if (subscriptionStatusFilter) params.subscription_status = subscriptionStatusFilter;
       return adminUsersApi.getUsers(params as Parameters<typeof adminUsersApi.getUsers>[0]);
     },
   });
   const users = usersQuery.data?.users ?? [];
   const total = usersQuery.data?.total ?? 0;
   const loading = usersQuery.isLoading;
+
+  const tariffsQuery = useQuery({
+    queryKey: ['admin-tariffs', 'users-filter'],
+    queryFn: () => tariffsApi.getTariffs(true),
+  });
+  const tariffs = tariffsQuery.data?.tariffs ?? [];
+
+  const updateUrlFilter = (key: 'tariff_id' | 'subscription_status', value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
 
   const statsQuery = useQuery({
     queryKey: ['admin-users-stats'] as const,
@@ -262,7 +322,7 @@ export default function AdminUsers() {
           </form>
         </div>
         {/* Filters row */}
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <select
             value={statusFilter}
             onChange={(e) => {
@@ -275,6 +335,39 @@ export default function AdminUsers() {
             <option value="active">{t('admin.users.status.active')}</option>
             <option value="blocked">{t('admin.users.status.blocked')}</option>
             <option value="deleted">{t('admin.users.status.deleted')}</option>
+          </select>
+          <select
+            value={tariffFilter}
+            onChange={(e) => {
+              setTariffFilter(e.target.value);
+              updateUrlFilter('tariff_id', e.target.value);
+              setOffset(0);
+            }}
+            className="min-w-44 rounded-xl border border-dark-700 bg-dark-800 px-3 py-2 text-dark-100"
+          >
+            <option value="">{t('admin.users.filters.allTariffs')}</option>
+            {tariffs.map((tariff) => (
+              <option key={tariff.id} value={tariff.id}>
+                {tariff.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={subscriptionStatusFilter}
+            onChange={(e) => {
+              setSubscriptionStatusFilter(e.target.value);
+              updateUrlFilter('subscription_status', e.target.value);
+              setOffset(0);
+            }}
+            className="min-w-52 rounded-xl border border-dark-700 bg-dark-800 px-3 py-2 text-dark-100"
+          >
+            <option value="">{t('admin.users.filters.allSubscriptionStatuses')}</option>
+            <option value="active">{t('admin.users.filters.subscriptionActive')}</option>
+            <option value="trial">{t('admin.users.filters.subscriptionTrial')}</option>
+            <option value="limited">{t('admin.users.filters.subscriptionLimited')}</option>
+            <option value="expired">{t('admin.users.filters.subscriptionExpired')}</option>
+            <option value="disabled">{t('admin.users.filters.subscriptionDisabled')}</option>
+            <option value="pending">{t('admin.users.filters.subscriptionPending')}</option>
           </select>
           <select
             value={sortBy}
@@ -308,6 +401,8 @@ export default function AdminUsers() {
               user={user}
               onClick={() => navigate(`/admin/users/${user.id}`)}
               formatAmount={(amount) => formatWithCurrency(amount)}
+              tariffFilter={tariffFilter}
+              subscriptionStatusFilter={subscriptionStatusFilter}
             />
           ))
         )}

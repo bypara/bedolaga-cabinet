@@ -20,6 +20,8 @@ import {
 
 interface MobileBottomNavProps {
   isKeyboardOpen: boolean;
+  /** Открыто выезжающее меню шапки: у него есть все те же пункты, панель поверх него лишняя. */
+  isMenuOpen?: boolean;
   referralEnabled?: boolean;
   wheelEnabled?: boolean;
   giftEnabled?: boolean;
@@ -27,6 +29,7 @@ interface MobileBottomNavProps {
 
 export function MobileBottomNav({
   isKeyboardOpen,
+  isMenuOpen = false,
   referralEnabled,
   wheelEnabled,
   giftEnabled,
@@ -59,13 +62,15 @@ export function MobileBottomNav({
   return (
     <nav
       className={cn(
-        'fixed bottom-3 left-3 right-3 z-50 mx-auto max-w-xl rounded-full border border-dark-700 bg-dark-900 p-1.5 shadow-[0_14px_42px_rgba(0,0,0,0.48)] transition-all duration-200 lg:hidden',
-        isKeyboardOpen
+        'fixed z-50 mx-auto max-w-xl rounded-full border border-dark-700 bg-dark-900/95 p-1.5 shadow-[0_14px_42px_rgba(0,0,0,0.48)] backdrop-blur-linear transition-all duration-200 lg:hidden',
+        isKeyboardOpen || isMenuOpen
           ? 'pointer-events-none translate-y-4 opacity-0'
           : 'translate-y-0 opacity-100',
       )}
       style={{
-        bottom: 'max(12px, env(safe-area-inset-bottom, 0px))',
+        bottom: 'var(--mobile-nav-offset)',
+        left: 'max(16px, env(safe-area-inset-left, 0px))',
+        right: 'max(16px, env(safe-area-inset-right, 0px))',
       }}
     >
       <div className="flex items-center">

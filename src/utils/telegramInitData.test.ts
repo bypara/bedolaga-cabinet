@@ -113,8 +113,9 @@ describe('single source of init data', () => {
   it('is read through this module only', async () => {
     const { readdirSync, readFileSync } = await import('node:fs');
     const { join } = await import('node:path');
+    const { fileURLToPath } = await import('node:url');
 
-    const srcDir = new URL('..', import.meta.url).pathname;
+    const srcDir = fileURLToPath(new URL('..', import.meta.url));
     const offenders: string[] = [];
 
     const walk = (dir: string): void => {

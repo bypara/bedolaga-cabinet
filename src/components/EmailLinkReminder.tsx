@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { brandingApi } from '@/api/branding';
 import { EmailIcon } from '@/components/icons';
 import { useAuthStore } from '@/store/auth';
+import { safeLocal } from '@/utils/safeStorage';
 
 const REMINDER_DELAY_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -25,11 +26,11 @@ export default function EmailLinkReminder() {
 
   if (!user || user.email || emailAuthConfig?.enabled !== true) return null;
 
-  const dismissedUntil = Number(localStorage.getItem(reminderKey(user.id)) ?? 0);
+  const dismissedUntil = Number(safeLocal.getItem(reminderKey(user.id)) ?? 0);
   if (Number.isFinite(dismissedUntil) && dismissedUntil > Date.now()) return null;
 
   const remindLater = () => {
-    localStorage.setItem(reminderKey(user.id), String(Date.now() + REMINDER_DELAY_MS));
+    safeLocal.setItem(reminderKey(user.id), String(Date.now() + REMINDER_DELAY_MS));
     forceStorageRefresh((value) => value + 1);
   };
 

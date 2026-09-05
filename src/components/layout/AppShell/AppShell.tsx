@@ -15,6 +15,7 @@ import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 import { themeColorsApi } from '@/api/themeColors';
 import { isLogoPreloaded } from '@/api/branding';
 import { cn } from '@/lib/utils';
+import { safeLocal } from '@/utils/safeStorage';
 
 import WebSocketNotifications from '@/components/WebSocketNotifications';
 import CampaignBonusNotifier from '@/components/CampaignBonusNotifier';
@@ -64,7 +65,7 @@ export function AppShell({ children }: AppShellProps) {
   const logout = useAuthStore((state) => state.logout);
   const { isFullscreen, safeAreaInset, contentSafeAreaInset, platform, isMobile } =
     useTelegramSDK();
-  const { mobile: headerHeight } = useHeaderHeight();
+  const { mobileCss: headerHeight } = useHeaderHeight();
   const haptic = useHaptic();
   const { toggleTheme, isDark } = useTheme();
 
@@ -90,9 +91,9 @@ export function AppShell({ children }: AppShellProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopSidebarWidth, setDesktopSidebarWidth] = useState(() => {
     if (typeof window === 'undefined') return DESKTOP_SIDEBAR_DEFAULT_WIDTH;
-    const savedWidth = Number(localStorage.getItem('cabinet-desktop-sidebar-width'));
+    const savedWidth = Number(safeLocal.getItem('cabinet-desktop-sidebar-width'));
     if (Number.isFinite(savedWidth)) return clampSidebarWidth(savedWidth);
-    return localStorage.getItem('cabinet-desktop-sidebar') === 'collapsed'
+    return safeLocal.getItem('cabinet-desktop-sidebar') === 'collapsed'
       ? DESKTOP_SIDEBAR_MIN_WIDTH
       : DESKTOP_SIDEBAR_DEFAULT_WIDTH;
   });
@@ -110,9 +111,9 @@ export function AppShell({ children }: AppShellProps) {
     const handlePointerMove = (event: PointerEvent) => {
       const nextWidth = clampSidebarWidth(event.clientX);
       setDesktopSidebarWidth(nextWidth);
-      localStorage.setItem('cabinet-desktop-sidebar-width', String(nextWidth));
+      safeLocal.setItem('cabinet-desktop-sidebar-width', String(nextWidth));
       if (nextWidth >= DESKTOP_SIDEBAR_LABEL_WIDTH) {
-        localStorage.setItem('cabinet-desktop-sidebar-expanded-width', String(nextWidth));
+        safeLocal.setItem('cabinet-desktop-sidebar-expanded-width', String(nextWidth));
       }
     };
     const handlePointerUp = () => setIsResizingSidebar(false);
@@ -130,20 +131,18 @@ export function AppShell({ children }: AppShellProps) {
 
   const toggleDesktopSidebar = () => {
     if (desktopSidebarExpanded) {
-      localStorage.setItem('cabinet-desktop-sidebar-expanded-width', String(desktopSidebarWidth));
-      localStorage.setItem('cabinet-desktop-sidebar-width', String(DESKTOP_SIDEBAR_MIN_WIDTH));
+      safeLocal.setItem('cabinet-desktop-sidebar-expanded-width', String(desktopSidebarWidth));
+      safeLocal.setItem('cabinet-desktop-sidebar-width', String(DESKTOP_SIDEBAR_MIN_WIDTH));
       setDesktopSidebarWidth(DESKTOP_SIDEBAR_MIN_WIDTH);
       return;
     }
 
-    const savedExpandedWidth = Number(
-      localStorage.getItem('cabinet-desktop-sidebar-expanded-width'),
-    );
+    const savedExpandedWidth = Number(safeLocal.getItem('cabinet-desktop-sidebar-expanded-width'));
     const nextWidth = Number.isFinite(savedExpandedWidth)
       ? clampSidebarWidth(savedExpandedWidth)
       : DESKTOP_SIDEBAR_DEFAULT_WIDTH;
     setDesktopSidebarWidth(Math.max(DESKTOP_SIDEBAR_LABEL_WIDTH, nextWidth));
-    localStorage.setItem(
+    safeLocal.setItem(
       'cabinet-desktop-sidebar-width',
       String(Math.max(DESKTOP_SIDEBAR_LABEL_WIDTH, nextWidth)),
     );
@@ -400,7 +399,9 @@ export function AppShell({ children }: AppShellProps) {
         )}
         style={{ '--desktop-sidebar-width': `${desktopSidebarWidth}px` } as CSSProperties}
       >
-        <main className="mx-auto max-w-6xl px-4 py-6 pb-8 lg:px-6">{children}</main>
+        <main className="mx-auto max-w-6xl py-6 pb-8 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] lg:px-6">
+          {children}
+        </main>
       </div>
     </div>
   );

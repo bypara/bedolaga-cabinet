@@ -21,6 +21,7 @@ import {
   CalendarIcon,
   CardIcon,
   CheckIcon,
+  ChevronDownIcon,
   ClockIcon,
   CopyIcon,
   ExclamationIcon,
@@ -542,7 +543,10 @@ export default function Referral() {
       <details className="bento-card group">
         <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-dark-100">
           {t('referral.terms.title')}
-          <span className="text-dark-500 transition-transform group-open:rotate-180">⌄</span>
+          <ChevronDownIcon
+            aria-hidden="true"
+            className="h-5 w-5 text-dark-400 transition-transform duration-200 group-open:rotate-180"
+          />
         </summary>
         <div className={`mt-4 grid grid-cols-2 gap-3 ${gridCols}`}>
           <StatCard
@@ -827,7 +831,10 @@ export default function Referral() {
           <span>{t('referral.yourReferrals')}</span>
           <span className="flex items-center gap-2 text-sm font-normal text-dark-500">
             {referralList?.items?.length || 0}
-            <span className="transition-transform group-open:rotate-180">⌄</span>
+            <ChevronDownIcon
+              aria-hidden="true"
+              className="h-5 w-5 text-dark-400 transition-transform duration-200 group-open:rotate-180"
+            />
           </span>
         </summary>
         {referralList?.items && referralList.items.length > 0 ? (
@@ -870,7 +877,10 @@ export default function Referral() {
             <span>{t('referral.earningsHistory')}</span>
             <span className="flex items-center gap-2 text-sm font-normal text-dark-500">
               {earnings.items.length}
-              <span className="transition-transform group-open:rotate-180">⌄</span>
+              <ChevronDownIcon
+                aria-hidden="true"
+                className="h-5 w-5 text-dark-400 transition-transform duration-200 group-open:rotate-180"
+              />
             </span>
           </summary>
           <div className="mt-4 space-y-2">
@@ -1119,7 +1129,10 @@ export default function Referral() {
                 <span>{t('referral.withdrawal.history')}</span>
                 <span className="flex items-center gap-2 text-sm font-normal text-dark-500">
                   {withdrawalHistory?.items?.length || 0}
-                  <span className="transition-transform group-open:rotate-180">⌄</span>
+                  <ChevronDownIcon
+                    aria-hidden="true"
+                    className="h-5 w-5 text-dark-400 transition-transform duration-200 group-open:rotate-180"
+                  />
                 </span>
               </summary>
               <div className="mt-4 space-y-2">

@@ -137,7 +137,7 @@ export default function SubscriptionCardActive({
 
       {isExpiringSoon && (
         <Link
-          to="/subscription/purchase"
+          to={`/subscriptions/${subscription.id}/renew`}
           className="mt-3 flex min-h-12 w-full items-center justify-center rounded-xl bg-warning-500/15 px-4 text-sm font-semibold text-warning-400 transition-colors hover:bg-warning-500/20"
         >
           {t('subscription.extend')}

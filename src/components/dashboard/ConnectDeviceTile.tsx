@@ -68,7 +68,7 @@ export default function ConnectDeviceTile({
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{t('dashboard.connectDevice')}</span>
         <span
-          className={`mt-0.5 block text-xs ${isFirstDevice ? 'text-white/70' : 'text-dark-500'}`}
+          className={`mt-0.5 block text-xs ${isFirstDevice ? 'text-white/70' : 'text-dark-400'}`}
         >
           {subscription.device_limit === 0
             ? t('dashboard.devicesConnectedUnlimited', { used: connectedDevices })

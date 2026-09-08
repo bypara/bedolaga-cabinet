@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/useTheme';
 import { useBranding } from '@/hooks/useBranding';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useScrollRestoration } from '@/hooks/useScrollRestoration';
+import { resetVirtualKeyboard } from '@/hooks/useVirtualKeyboard';
 import { themeColorsApi } from '@/api/themeColors';
 import { isLogoPreloaded } from '@/api/branding';
 import { cn } from '@/lib/utils';
@@ -99,6 +100,13 @@ export function AppShell({ children }: AppShellProps) {
   });
   const [isResizingSidebar, setIsResizingSidebar] = useState(false);
   const desktopSidebarExpanded = desktopSidebarWidth >= DESKTOP_SIDEBAR_LABEL_WIDTH;
+
+  // A focused field can disappear during navigation without firing blur. Reset
+  // the shared keyboard signal so fixed sheets on the next screen are visible.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pathname is intentionally the navigation trigger
+  useEffect(() => {
+    resetVirtualKeyboard();
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!isResizingSidebar) return;
@@ -224,7 +232,7 @@ export function AppShell({ children }: AppShellProps) {
   // headerHeight comes from useHeaderHeight() — accounts for TG safe area in fullscreen
 
   return (
-    <div className="min-h-viewport">
+    <div className="min-h-viewport" data-mobile-nav="off">
       {/* Global components */}
       <WebSocketNotifications />
       <CampaignBonusNotifier />

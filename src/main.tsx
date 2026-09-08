@@ -133,11 +133,14 @@ void useAuthStore.getState().initialize();
 // the /login page first.
 void checkBackendOnStartup();
 
-if ('requestIdleCallback' in window) {
-  requestIdleCallback(() => initLogoPreload());
-} else {
-  setTimeout(initLogoPreload, 100);
-}
+// A cached brand resolves immediately. On the first visit, wait briefly for the
+// public branding response and logo blob so /login does not paint the generic
+// build-time monogram/name before replacing them with the operator's brand.
+// The timeout keeps an unavailable API from holding the whole application.
+const brandingFirstPaintReady: Promise<void> = Promise.race([
+  initLogoPreload(),
+  new Promise<void>((resolve) => setTimeout(resolve, UI.BRANDING_FIRST_PAINT_TIMEOUT_MS)),
+]);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -169,7 +172,12 @@ const themeColorsReady: Promise<void> = readThemeColorsHint()
 // дефолтом — по-английски, отчего форма выглядела наполовину переведённой.
 // i18nReady не реджектится и сам снимается по таймауту, так что не приехавший
 // чанк даёт непереведённый текст, а не белый экран.
-void Promise.all([i18nReady, telegramLanguageReady, themeColorsReady]).then(() => {
+void Promise.all([
+  i18nReady,
+  telegramLanguageReady,
+  themeColorsReady,
+  brandingFirstPaintReady,
+]).then(() => {
   ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
       <ErrorBoundary level="app">

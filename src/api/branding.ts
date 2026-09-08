@@ -167,12 +167,26 @@ async function loadLogoBlob(logoPath: string): Promise<void> {
 // Get the blob URL for the logo (safe, doesn't expose backend)
 export const getLogoBlobUrl = (): string | null => _logoBlobUrl;
 
-// Initialize logo preload from cache on page load
-export const initLogoPreload = () => {
-  const cached = getCachedBranding();
-  if (cached) {
-    preloadLogo(cached);
+// Prepare both the branding data and its logo before React's first paint.
+// On a genuinely cold visit there is no session cache yet, so merely preloading
+// a cached logo (the old behaviour) always let /login flash the build-time
+// monogram and name first.
+export const initLogoPreload = async (): Promise<void> => {
+  let branding = getCachedBranding();
+
+  if (!branding) {
+    try {
+      const response = await apiClient.get<BrandingInfo>('/cabinet/branding');
+      branding = response.data;
+      setCachedBranding(branding);
+    } catch {
+      // Branding is non-critical: React will use the build-time fallback and
+      // its regular query will retry once the application has mounted.
+      return;
+    }
   }
+
+  await preloadLogo(branding);
 };
 
 export interface BotStartVideoInfo {

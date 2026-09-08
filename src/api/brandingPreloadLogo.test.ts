@@ -2,6 +2,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrandingInfo } from './branding';
 
+const { apiGet } = vi.hoisted(() => ({ apiGet: vi.fn() }));
+
+vi.mock('./client', () => ({
+  default: { get: apiGet },
+}));
+
 /**
  * Загрузка логотипа переживает отравленный кеш браузера.
  *
@@ -37,6 +43,8 @@ const objectUrl = { createObjectURL: vi.fn(() => 'blob:logo'), revokeObjectURL: 
 
 beforeEach(() => {
   sessionStorage.clear();
+  localStorage.clear();
+  apiGet.mockReset();
   objectUrl.createObjectURL.mockClear();
   objectUrl.revokeObjectURL.mockClear();
   Object.defineProperty(URL, 'createObjectURL', {
@@ -56,6 +64,34 @@ afterEach(() => {
 });
 
 describe('preloadLogo', () => {
+  it('on a cold visit fetches and caches branding before preloading its logo', async () => {
+    apiGet.mockResolvedValue({ data: BRANDING });
+    const fetch = vi.fn(async () => okResponse());
+    vi.stubGlobal('fetch', fetch);
+    const { getCachedBranding, getLogoBlobUrl, initLogoPreload } = await loadModule();
+
+    await initLogoPreload();
+
+    expect(apiGet).toHaveBeenCalledOnce();
+    expect(apiGet).toHaveBeenCalledWith('/cabinet/branding');
+    expect(getCachedBranding()).toEqual(BRANDING);
+    expect(getLogoBlobUrl()).toBe('blob:logo');
+  });
+
+  it('uses cached branding without requesting its metadata again', async () => {
+    sessionStorage.setItem('cabinet_branding', JSON.stringify(BRANDING));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => okResponse()),
+    );
+    const { getLogoBlobUrl, initLogoPreload } = await loadModule();
+
+    await initLogoPreload();
+
+    expect(apiGet).not.toHaveBeenCalled();
+    expect(getLogoBlobUrl()).toBe('blob:logo');
+  });
+
   it('в здоровом случае один запрос с кешем по умолчанию', async () => {
     const fetch = vi.fn(async () => okResponse());
     vi.stubGlobal('fetch', fetch);

@@ -22,6 +22,8 @@ export const UI = {
   TELEGRAM_HEADER_IOS_PX: 45,
   MOBILE_HEADER_HEIGHT_PX: 64,
   DESKTOP_HEADER_HEIGHT_PX: 56,
+  /** Maximum wait for the operator name and logo before React's first paint. */
+  BRANDING_FIRST_PAINT_TIMEOUT_MS: 2000,
   /** Сколько ждать палитру оператора перед первой отрисовкой, когда подсказки ещё нет. */
   THEME_COLORS_FIRST_PAINT_TIMEOUT_MS: 1500,
 } as const;

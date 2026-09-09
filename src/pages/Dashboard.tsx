@@ -30,9 +30,9 @@ import {
   AgentIcon,
   ChevronRightIcon,
   GiftIcon,
-  InfoIcon,
+  ShieldIcon,
   StarIcon,
-  UsersIcon,
+  UserIcon,
   WalletIcon,
 } from '@/components/icons';
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
@@ -45,6 +45,7 @@ export default function Dashboard() {
   const { giftEnabled } = useFeatureFlags();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
   const refreshUser = useAuthStore((state) => state.refreshUser);
   const queryClient = useQueryClient();
   const { isCompleted: isOnboardingCompleted, complete: completeOnboarding } = useOnboarding();
@@ -348,25 +349,26 @@ export default function Dashboard() {
         </Link>
 
         <Link
-          to="/referral"
+          to="/profile"
           className="flex min-h-28 flex-col justify-between rounded-3xl border border-dark-700/70 bg-dark-900/70 p-4 transition-colors active:bg-dark-800"
         >
-          <span className="text-lg font-semibold text-dark-100">
-            {referralInfo?.total_referrals || 0}
-          </span>
+          <span className="truncate text-lg font-semibold text-dark-100">{userName}</span>
           <span className="flex items-end justify-between gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-dark-800 text-dark-400">
-              <UsersIcon className="h-5 w-5" />
+              <UserIcon className="h-5 w-5" />
             </span>
-            <span className="text-xs font-medium text-dark-500">{t('nav.referral')}</span>
+            <span className="text-xs font-medium text-dark-500">{t('nav.profile')}</span>
           </span>
         </Link>
       </div>
 
-      <div className={cn('grid gap-3 lg:hidden', giftEnabled ? 'grid-cols-3' : 'grid-cols-2')}>
+      <div className="grid grid-cols-2 gap-3 lg:hidden">
         <Link
           to="/support"
-          className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-dark-700/70 bg-dark-900/55 px-2 py-3 text-center transition-colors active:bg-dark-800"
+          className={cn(
+            'flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-dark-700/70 bg-dark-900/55 px-2 py-3 text-center transition-colors active:bg-dark-800',
+            !giftEnabled && 'col-span-2',
+          )}
         >
           <AgentIcon className="h-5 w-5 text-accent-400" />
           <span className="text-xs font-medium text-dark-300">{t('nav.support')}</span>
@@ -380,13 +382,15 @@ export default function Dashboard() {
             <span className="text-xs font-medium text-dark-300">{t('nav.gift')}</span>
           </Link>
         )}
-        <Link
-          to="/info"
-          className="flex min-h-20 flex-col items-center justify-center gap-2 rounded-2xl border border-dark-700/70 bg-dark-900/55 px-2 py-3 text-center transition-colors active:bg-dark-800"
-        >
-          <InfoIcon className="h-5 w-5 text-accent-400" />
-          <span className="text-xs font-medium text-dark-300">{t('nav.info')}</span>
-        </Link>
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="col-span-2 flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-warning-500/20 bg-warning-500/10 px-4 py-3 text-warning-400 transition-colors active:bg-warning-500/15"
+          >
+            <ShieldIcon className="h-5 w-5" />
+            <span className="text-sm font-medium">{t('admin.nav.title')}</span>
+          </Link>
+        )}
       </div>
 
       {/* Pending Gift Activations */}

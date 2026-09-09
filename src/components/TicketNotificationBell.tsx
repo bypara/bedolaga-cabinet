@@ -16,12 +16,14 @@ interface TicketNotificationBellProps {
   isAdmin?: boolean;
   sidebar?: boolean;
   expanded?: boolean;
+  className?: string;
 }
 
 export default function TicketNotificationBell({
   isAdmin = false,
   sidebar = false,
   expanded = false,
+  className,
 }: TicketNotificationBellProps) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -250,7 +252,7 @@ export default function TicketNotificationBell({
             : sidebar
               ? 'text-dark-400 hover:bg-dark-800 hover:text-dark-100'
               : 'border-dark-700/50 bg-dark-800/50 text-dark-400 hover:bg-dark-700 hover:text-accent-400'
-        }`}
+        } ${className ?? ''}`}
         title={t('notifications.title', 'Notifications')}
       >
         <BellIcon />

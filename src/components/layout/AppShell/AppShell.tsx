@@ -31,9 +31,7 @@ import {
   CreditCardIcon,
   AgentIcon,
   UserIcon,
-  UsersIcon,
   ShieldIcon,
-  InfoIcon,
   WheelIcon,
   GamepadIcon,
   ClipboardIcon,
@@ -72,7 +70,7 @@ export function AppShell({ children }: AppShellProps) {
 
   // Extracted hooks
   const { appName, logoLetter, hasCustomLogo, logoUrl } = useBranding();
-  const { referralEnabled, wheelEnabled, hasContests, hasPolls, giftEnabled } = useFeatureFlags();
+  const { wheelEnabled, hasContests, hasPolls, giftEnabled } = useFeatureFlags();
   useScrollRestoration();
   // Анимированный фон рендерит BackgroundHost в App (не перемонтируется при
   // смене роута) — здесь только регистрируем, что на этом роуте он нужен.
@@ -89,7 +87,6 @@ export function AppShell({ children }: AppShellProps) {
   // Only apply fullscreen UI adjustments on mobile Telegram (iOS/Android)
   const isMobileFullscreen = isFullscreen && isMobile;
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopSidebarWidth, setDesktopSidebarWidth] = useState(() => {
     if (typeof window === 'undefined') return DESKTOP_SIDEBAR_DEFAULT_WIDTH;
     const savedWidth = Number(safeLocal.getItem('cabinet-desktop-sidebar-width'));
@@ -162,13 +159,11 @@ export function AppShell({ children }: AppShellProps) {
     { path: '/', label: t('nav.dashboard'), icon: HomeIcon },
     { path: '/subscriptions', label: t('nav.subscription'), icon: SubscriptionIcon },
     { path: '/balance', label: t('nav.balance'), icon: CreditCardIcon },
-    ...(referralEnabled ? [{ path: '/referral', label: t('nav.referral'), icon: UsersIcon }] : []),
     ...(giftEnabled ? [{ path: '/gift', label: t('nav.gift'), icon: GiftIcon }] : []),
     ...(wheelEnabled ? [{ path: '/wheel', label: t('nav.wheel'), icon: WheelIcon }] : []),
     ...(hasContests ? [{ path: '/contests', label: t('nav.contests'), icon: GamepadIcon }] : []),
     ...(hasPolls ? [{ path: '/polls', label: t('nav.polls'), icon: ClipboardIcon }] : []),
     { path: '/support', label: t('nav.support'), icon: AgentIcon },
-    { path: '/info', label: t('nav.info'), icon: InfoIcon },
     { path: '/profile', label: t('nav.profile'), icon: UserIcon },
   ];
 
@@ -383,17 +378,10 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Mobile Header */}
       <AppHeader
-        mobileMenuOpen={mobileMenuOpen}
-        setMobileMenuOpen={setMobileMenuOpen}
-        onCommandPaletteOpen={() => {}}
-        headerHeight={headerHeight}
         isFullscreen={isMobileFullscreen}
         safeAreaInset={safeAreaInset}
         contentSafeAreaInset={contentSafeAreaInset}
         telegramPlatform={platform}
-        hasContests={hasContests}
-        hasPolls={hasPolls}
-        giftEnabled={giftEnabled}
       />
 
       {/* Mobile spacer */}

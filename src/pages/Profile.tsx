@@ -1,5 +1,5 @@
 import { uiLocale } from '@/utils/uiLocale';
-import { useState, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { usePlatform } from '@/platform';
@@ -11,6 +11,8 @@ import { displayName } from '../utils/displayName';
 import { authApi } from '../api/auth';
 import { isValidEmail } from '../utils/validation';
 import { useCountdown } from '../hooks/useCountdown';
+import { useTheme } from '../hooks/useTheme';
+import { useUserAvatar } from '../hooks/useUserAvatar';
 import { getApiErrorMessage } from '../utils/api-error';
 import {
   notificationsApi,
@@ -19,12 +21,28 @@ import {
 } from '../api/notifications';
 import { referralApi } from '../api/referral';
 import { brandingApi, type EmailAuthEnabled } from '../api/branding';
+import { themeColorsApi } from '../api/themeColors';
 import { UI } from '../config/constants';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { Card } from '@/components/data-display/Card';
 import { Button } from '@/components/primitives/Button';
 import { Switch } from '@/components/primitives/Switch';
 import { staggerContainer, staggerItem } from '@/components/motion/transitions';
-import { CopyIcon, CheckIcon, ShareIcon, ArrowRightIcon, PencilIcon } from '@/components/icons';
+import {
+  ArrowRightIcon,
+  BellIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  CopyIcon,
+  InfoIcon,
+  LogoutIcon,
+  MoonIcon,
+  PencilIcon,
+  ShareIcon,
+  SunIcon,
+  UserIcon,
+  UsersIcon,
+} from '@/components/icons';
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 
 export default function Profile() {
@@ -32,11 +50,17 @@ export default function Profile() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
+  const logout = useAuthStore((state) => state.logout);
   const queryClient = useQueryClient();
+  const avatar = useUserAvatar(user);
+  const { isDark, toggleTheme } = useTheme();
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [accountDetailsOpen, setAccountDetailsOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Inline email change flow
   const [changeEmailStep, setChangeEmailStep] = useState<'email' | 'code' | 'success' | null>(null);
@@ -73,6 +97,13 @@ export default function Profile() {
   });
   const isEmailAuthEnabled = emailAuthConfig?.enabled ?? true;
   const isEmailVerificationEnabled = emailAuthConfig?.verification_enabled ?? true;
+
+  const { data: enabledThemes } = useQuery({
+    queryKey: ['enabled-themes'],
+    queryFn: themeColorsApi.getEnabledThemes,
+    staleTime: 1000 * 60 * 5,
+  });
+  const canToggleTheme = enabledThemes?.dark && enabledThemes?.light;
 
   // Build referral link for cabinet
   const referralLink = referralInfo?.referral_code
@@ -173,6 +204,14 @@ export default function Profile() {
     },
   });
 
+  const resetChangeEmail = useCallback(() => {
+    setChangeEmailStep(null);
+    setNewEmail('');
+    setChangeCode('');
+    setChangeError(null);
+    startResendCooldown(0);
+  }, [startResendCooldown]);
+
   // Auto-focus inputs on step change (skip on Telegram — keyboard hides bottom nav)
   const { platform: profilePlatform, openTelegramLink } = usePlatform();
   useEffect(() => {
@@ -189,15 +228,7 @@ export default function Profile() {
     if (changeEmailStep !== 'success') return;
     const timer = setTimeout(() => resetChangeEmail(), 3000);
     return () => clearTimeout(timer);
-  }, [changeEmailStep]);
-
-  const resetChangeEmail = () => {
-    setChangeEmailStep(null);
-    setNewEmail('');
-    setChangeCode('');
-    setChangeError(null);
-    startResendCooldown(0);
-  };
+  }, [changeEmailStep, resetChangeEmail]);
 
   const handleSendChangeCode = () => {
     setChangeError(null);
@@ -256,6 +287,15 @@ export default function Profile() {
     updateNotificationsMutation.mutate(update);
   };
 
+  const openNotificationSettings = () => {
+    setNotificationsOpen(true);
+    requestAnimationFrame(() => {
+      document
+        .getElementById('profile-notification-settings')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   return (
     <motion.div
       className="space-y-6"
@@ -267,47 +307,167 @@ export default function Profile() {
         <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('profile.title')}</h1>
       </motion.div>
 
-      {/* User Info Card */}
+      {/* Profile summary */}
       <motion.div variants={staggerItem}>
-        <Card>
-          <h2 className="mb-6 text-lg font-semibold text-dark-100">{t('profile.accountInfo')}</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-dark-800/50 py-3">
-              <span className="text-dark-400">{t('profile.telegramId')}</span>
-              <span className="font-medium text-dark-100">{user?.telegram_id}</span>
+        <Card className="bg-gradient-to-br from-accent-500/10 via-dark-900/80 to-dark-900">
+          <div className="flex items-center gap-4 sm:gap-5">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-accent-500/30 bg-accent-500/10 sm:h-20 sm:w-20">
+              {avatar.src ? (
+                <img
+                  src={avatar.src}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  onError={avatar.onError}
+                />
+              ) : (
+                <UserIcon className="h-8 w-8 text-accent-400" />
+              )}
             </div>
-            {user?.username && (
-              <div className="flex items-center justify-between border-b border-dark-800/50 py-3">
-                <span className="text-dark-400">{t('profile.username')}</span>
-                <span className="font-medium text-dark-100">@{user.username}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="truncate text-xl font-semibold text-dark-50 sm:text-2xl">
+                  {displayName(user)}
+                </h2>
+                {isAdmin && (
+                  <span className="rounded-full border border-warning-500/30 bg-warning-500/10 px-2 py-0.5 text-xs font-medium text-warning-400">
+                    {t('admin.nav.title')}
+                  </span>
+                )}
               </div>
-            )}
-            <div className="flex items-center justify-between border-b border-dark-800/50 py-3">
-              <span className="text-dark-400">{t('profile.name')}</span>
-              <span className="font-medium text-dark-100">{displayName(user)}</span>
-            </div>
-            <div className="flex items-center justify-between py-3">
-              <span className="text-dark-400">{t('profile.registeredAt')}</span>
-              <span className="font-medium text-dark-100">
-                {user?.created_at ? new Date(user.created_at).toLocaleDateString(uiLocale()) : '-'}
-              </span>
+              <p className="mt-1 truncate text-sm text-dark-400">
+                {user?.username ? `@${user.username}` : `Telegram ID ${user?.telegram_id ?? '—'}`}
+              </p>
+              {user?.email && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="max-w-full truncate rounded-full bg-dark-800/80 px-2.5 py-1 text-dark-300">
+                    {user.email}
+                  </span>
+                  {isEmailVerificationEnabled && (
+                    <span className={user.email_verified ? 'badge-success' : 'badge-warning'}>
+                      {user.email_verified ? t('profile.verified') : t('profile.notVerified')}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </Card>
       </motion.div>
 
-      {/* Connected Accounts Link */}
+      {/* Profile sections */}
       <motion.div variants={staggerItem}>
-        <Card interactive onClick={() => navigate('/profile/accounts')}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-dark-100">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Link
+            to="/profile/accounts"
+            className="group flex min-h-28 flex-col justify-between rounded-[var(--bento-radius)] border border-dark-700/40 bg-dark-900/70 p-4 transition-colors hover:border-accent-500/30 hover:bg-dark-800/60"
+          >
+            <UserIcon className="h-6 w-6 text-accent-400" />
+            <div className="flex items-end justify-between gap-2">
+              <span className="font-medium text-dark-100">
                 {t('profile.accounts.goToAccounts')}
-              </h2>
-              <p className="text-sm text-dark-400">{t('profile.accounts.subtitle')}</p>
+              </span>
+              <ArrowRightIcon className="h-4 w-4 shrink-0 text-dark-500 transition-transform group-hover:translate-x-0.5" />
             </div>
-            <ArrowRightIcon className="h-5 w-5 text-dark-400" />
-          </div>
+          </Link>
+
+          {referralTerms?.is_enabled && (
+            <Link
+              to="/referral"
+              className="group flex min-h-28 flex-col justify-between rounded-[var(--bento-radius)] border border-dark-700/40 bg-dark-900/70 p-4 transition-colors hover:border-accent-500/30 hover:bg-dark-800/60"
+            >
+              <UsersIcon className="h-6 w-6 text-accent-400" />
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <span className="block font-medium text-dark-100">{t('nav.referral')}</span>
+                  <span className="text-xs text-dark-500">
+                    {referralInfo?.total_referrals ?? 0}
+                  </span>
+                </div>
+                <ArrowRightIcon className="h-4 w-4 shrink-0 text-dark-500 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </Link>
+          )}
+
+          <Link
+            to="/info"
+            className="group flex min-h-28 flex-col justify-between rounded-[var(--bento-radius)] border border-dark-700/40 bg-dark-900/70 p-4 transition-colors hover:border-accent-500/30 hover:bg-dark-800/60"
+          >
+            <InfoIcon className="h-6 w-6 text-accent-400" />
+            <div className="flex items-end justify-between gap-2">
+              <span className="font-medium text-dark-100">{t('nav.info')}</span>
+              <ArrowRightIcon className="h-4 w-4 shrink-0 text-dark-500 transition-transform group-hover:translate-x-0.5" />
+            </div>
+          </Link>
+
+          <button
+            type="button"
+            onClick={openNotificationSettings}
+            className="group flex min-h-28 flex-col justify-between rounded-[var(--bento-radius)] border border-dark-700/40 bg-dark-900/70 p-4 text-left transition-colors hover:border-accent-500/30 hover:bg-dark-800/60"
+          >
+            <BellIcon className="h-6 w-6 text-accent-400" />
+            <div className="flex w-full items-end justify-between gap-2">
+              <span className="font-medium text-dark-100">{t('profile.notifications.title')}</span>
+              <ChevronDownIcon className="h-4 w-4 shrink-0 text-dark-500" />
+            </div>
+          </button>
+        </div>
+      </motion.div>
+
+      {/* Less frequently needed account details */}
+      <motion.div variants={staggerItem}>
+        <Card size="md">
+          <button
+            type="button"
+            onClick={() => setAccountDetailsOpen((open) => !open)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+            aria-expanded={accountDetailsOpen}
+          >
+            <span className="font-semibold text-dark-100">{t('profile.accountInfo')}</span>
+            <ChevronDownIcon
+              className={`h-5 w-5 shrink-0 text-dark-400 transition-transform ${accountDetailsOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {accountDetailsOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-4 space-y-1 border-t border-dark-800/50 pt-3">
+                  <div className="flex items-center justify-between gap-4 py-2">
+                    <span className="text-sm text-dark-400">{t('profile.telegramId')}</span>
+                    <span className="truncate text-sm font-medium text-dark-100">
+                      {user?.telegram_id ?? '—'}
+                    </span>
+                  </div>
+                  {user?.username && (
+                    <div className="flex items-center justify-between gap-4 py-2">
+                      <span className="text-sm text-dark-400">{t('profile.username')}</span>
+                      <span className="truncate text-sm font-medium text-dark-100">
+                        @{user.username}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-4 py-2">
+                    <span className="text-sm text-dark-400">{t('profile.name')}</span>
+                    <span className="truncate text-sm font-medium text-dark-100">
+                      {displayName(user)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 py-2">
+                    <span className="text-sm text-dark-400">{t('profile.registeredAt')}</span>
+                    <span className="text-sm font-medium text-dark-100">
+                      {user?.created_at
+                        ? new Date(user.created_at).toLocaleDateString(uiLocale())
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Card>
       </motion.div>
 
@@ -582,168 +742,241 @@ export default function Profile() {
       )}
 
       {/* Notification Settings */}
-      <motion.div variants={staggerItem}>
-        <Card>
-          <h2 className="mb-6 text-lg font-semibold text-dark-100">
-            {t('profile.notifications.title')}
-          </h2>
+      <motion.div id="profile-notification-settings" variants={staggerItem}>
+        <Card size="md">
+          <button
+            type="button"
+            onClick={() => setNotificationsOpen((open) => !open)}
+            className="flex w-full items-center justify-between gap-3 text-left"
+            aria-expanded={notificationsOpen}
+          >
+            <span className="flex items-center gap-3 font-semibold text-dark-100">
+              <BellIcon className="h-5 w-5 text-accent-400" />
+              {t('profile.notifications.title')}
+            </span>
+            <ChevronDownIcon
+              className={`h-5 w-5 shrink-0 text-dark-400 transition-transform ${notificationsOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
 
-          {notificationsLoading ? (
-            <SkeletonGroup className="space-y-3">
-              <Skeleton variant="card" count={3} className="h-16" />
-            </SkeletonGroup>
-          ) : notificationSettings ? (
-            <div className="space-y-6">
-              {/* Subscription Expiry */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-dark-100">
-                      {t('profile.notifications.subscriptionExpiry')}
-                    </p>
-                    <p className="text-sm text-dark-400">
-                      {t('profile.notifications.subscriptionExpiryDesc')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.subscription_expiry_enabled}
-                    onCheckedChange={(checked) =>
-                      handleNotificationToggle('subscription_expiry_enabled', checked)
-                    }
-                  />
+          <AnimatePresence initial={false}>
+            {notificationsOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="border-t border-dark-800/50 pt-5 mt-4">
+                  {notificationsLoading ? (
+                    <SkeletonGroup className="space-y-3">
+                      <Skeleton variant="card" count={3} className="h-16" />
+                    </SkeletonGroup>
+                  ) : notificationSettings ? (
+                    <div className="space-y-6">
+                      {/* Subscription Expiry */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-dark-100">
+                              {t('profile.notifications.subscriptionExpiry')}
+                            </p>
+                            <p className="text-sm text-dark-400">
+                              {t('profile.notifications.subscriptionExpiryDesc')}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={notificationSettings.subscription_expiry_enabled}
+                            onCheckedChange={(checked) =>
+                              handleNotificationToggle('subscription_expiry_enabled', checked)
+                            }
+                          />
+                        </div>
+                        {notificationSettings.subscription_expiry_enabled && (
+                          <div className="flex items-center gap-3 pl-4">
+                            <span className="text-sm text-dark-400">
+                              {t('profile.notifications.daysBeforeExpiry')}
+                            </span>
+                            <select
+                              value={notificationSettings.subscription_expiry_days}
+                              onChange={(e) =>
+                                handleNotificationValue(
+                                  'subscription_expiry_days',
+                                  Number(e.target.value),
+                                )
+                              }
+                              className="input w-20 py-1"
+                            >
+                              {[1, 2, 3, 5, 7, 14].map((d) => (
+                                <option key={d} value={d}>
+                                  {d}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Traffic Warning */}
+                      <div className="space-y-3 border-t border-dark-800/50 pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-dark-100">
+                              {t('profile.notifications.trafficWarning')}
+                            </p>
+                            <p className="text-sm text-dark-400">
+                              {t('profile.notifications.trafficWarningDesc')}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={notificationSettings.traffic_warning_enabled}
+                            onCheckedChange={(checked) =>
+                              handleNotificationToggle('traffic_warning_enabled', checked)
+                            }
+                          />
+                        </div>
+                        {notificationSettings.traffic_warning_enabled && (
+                          <div className="flex items-center gap-3 pl-4">
+                            <span className="text-sm text-dark-400">
+                              {t('profile.notifications.atPercent')}
+                            </span>
+                            <select
+                              value={notificationSettings.traffic_warning_percent}
+                              onChange={(e) =>
+                                handleNotificationValue(
+                                  'traffic_warning_percent',
+                                  Number(e.target.value),
+                                )
+                              }
+                              className="input w-20 py-1"
+                            >
+                              {[50, 70, 80, 90, 95].map((p) => (
+                                <option key={p} value={p}>
+                                  {p}%
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Balance Low */}
+                      <div className="space-y-3 border-t border-dark-800/50 pt-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-dark-100">
+                              {t('profile.notifications.balanceLow')}
+                            </p>
+                            <p className="text-sm text-dark-400">
+                              {t('profile.notifications.balanceLowDesc')}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={notificationSettings.balance_low_enabled}
+                            onCheckedChange={(checked) =>
+                              handleNotificationToggle('balance_low_enabled', checked)
+                            }
+                          />
+                        </div>
+                        {notificationSettings.balance_low_enabled && (
+                          <div className="flex items-center gap-3 pl-4">
+                            <span className="text-sm text-dark-400">
+                              {t('profile.notifications.threshold')}
+                            </span>
+                            <input
+                              type="number"
+                              value={notificationSettings.balance_low_threshold}
+                              onChange={(e) =>
+                                handleNotificationValue(
+                                  'balance_low_threshold',
+                                  Number(e.target.value),
+                                )
+                              }
+                              min={0}
+                              className="input w-24 py-1"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* News */}
+                      <div className="flex items-center justify-between border-t border-dark-800/50 pt-6">
+                        <div>
+                          <p className="font-medium text-dark-100">
+                            {t('profile.notifications.news')}
+                          </p>
+                          <p className="text-sm text-dark-400">
+                            {t('profile.notifications.newsDesc')}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.news_enabled}
+                          onCheckedChange={(checked) =>
+                            handleNotificationToggle('news_enabled', checked)
+                          }
+                        />
+                      </div>
+
+                      {/* Promo Offers */}
+                      <div className="flex items-center justify-between border-t border-dark-800/50 pt-6">
+                        <div>
+                          <p className="font-medium text-dark-100">
+                            {t('profile.notifications.promoOffers')}
+                          </p>
+                          <p className="text-sm text-dark-400">
+                            {t('profile.notifications.promoOffersDesc')}
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.promo_offers_enabled}
+                          onCheckedChange={(checked) =>
+                            handleNotificationToggle('promo_offers_enabled', checked)
+                          }
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-dark-400">{t('profile.notifications.unavailable')}</p>
+                  )}
                 </div>
-                {notificationSettings.subscription_expiry_enabled && (
-                  <div className="flex items-center gap-3 pl-4">
-                    <span className="text-sm text-dark-400">
-                      {t('profile.notifications.daysBeforeExpiry')}
-                    </span>
-                    <select
-                      value={notificationSettings.subscription_expiry_days}
-                      onChange={(e) =>
-                        handleNotificationValue('subscription_expiry_days', Number(e.target.value))
-                      }
-                      className="input w-20 py-1"
-                    >
-                      {[1, 2, 3, 5, 7, 14].map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Card>
+      </motion.div>
+
+      {/* Mobile-only controls formerly hidden behind the gear menu */}
+      <motion.div variants={staggerItem} className="space-y-3 lg:hidden">
+        <Card size="md" className="overflow-visible">
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-sm font-medium text-dark-200">
+              {t('admin.buttons.sections.language')}
+            </span>
+            <LanguageSwitcher />
+          </div>
+          {canToggleTheme && (
+            <div className="mt-3 flex w-full items-center justify-between border-t border-dark-800/50 pt-4">
+              <span className="flex items-center gap-3 text-sm font-medium text-dark-200">
+                {isDark ? (
+                  <SunIcon className="h-5 w-5 text-accent-400" />
+                ) : (
+                  <MoonIcon className="h-5 w-5 text-accent-400" />
                 )}
-              </div>
-
-              {/* Traffic Warning */}
-              <div className="space-y-3 border-t border-dark-800/50 pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-dark-100">
-                      {t('profile.notifications.trafficWarning')}
-                    </p>
-                    <p className="text-sm text-dark-400">
-                      {t('profile.notifications.trafficWarningDesc')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.traffic_warning_enabled}
-                    onCheckedChange={(checked) =>
-                      handleNotificationToggle('traffic_warning_enabled', checked)
-                    }
-                  />
-                </div>
-                {notificationSettings.traffic_warning_enabled && (
-                  <div className="flex items-center gap-3 pl-4">
-                    <span className="text-sm text-dark-400">
-                      {t('profile.notifications.atPercent')}
-                    </span>
-                    <select
-                      value={notificationSettings.traffic_warning_percent}
-                      onChange={(e) =>
-                        handleNotificationValue('traffic_warning_percent', Number(e.target.value))
-                      }
-                      className="input w-20 py-1"
-                    >
-                      {[50, 70, 80, 90, 95].map((p) => (
-                        <option key={p} value={p}>
-                          {p}%
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Balance Low */}
-              <div className="space-y-3 border-t border-dark-800/50 pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-dark-100">
-                      {t('profile.notifications.balanceLow')}
-                    </p>
-                    <p className="text-sm text-dark-400">
-                      {t('profile.notifications.balanceLowDesc')}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={notificationSettings.balance_low_enabled}
-                    onCheckedChange={(checked) =>
-                      handleNotificationToggle('balance_low_enabled', checked)
-                    }
-                  />
-                </div>
-                {notificationSettings.balance_low_enabled && (
-                  <div className="flex items-center gap-3 pl-4">
-                    <span className="text-sm text-dark-400">
-                      {t('profile.notifications.threshold')}
-                    </span>
-                    <input
-                      type="number"
-                      value={notificationSettings.balance_low_threshold}
-                      onChange={(e) =>
-                        handleNotificationValue('balance_low_threshold', Number(e.target.value))
-                      }
-                      min={0}
-                      className="input w-24 py-1"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* News */}
-              <div className="flex items-center justify-between border-t border-dark-800/50 pt-6">
-                <div>
-                  <p className="font-medium text-dark-100">{t('profile.notifications.news')}</p>
-                  <p className="text-sm text-dark-400">{t('profile.notifications.newsDesc')}</p>
-                </div>
-                <Switch
-                  checked={notificationSettings.news_enabled}
-                  onCheckedChange={(checked) => handleNotificationToggle('news_enabled', checked)}
-                />
-              </div>
-
-              {/* Promo Offers */}
-              <div className="flex items-center justify-between border-t border-dark-800/50 pt-6">
-                <div>
-                  <p className="font-medium text-dark-100">
-                    {t('profile.notifications.promoOffers')}
-                  </p>
-                  <p className="text-sm text-dark-400">
-                    {t('profile.notifications.promoOffersDesc')}
-                  </p>
-                </div>
-                <Switch
-                  checked={notificationSettings.promo_offers_enabled}
-                  onCheckedChange={(checked) =>
-                    handleNotificationToggle('promo_offers_enabled', checked)
-                  }
-                />
-              </div>
+                {isDark ? t('theme.light') : t('theme.dark')}
+              </span>
+              <Switch checked={!isDark} onCheckedChange={toggleTheme} />
             </div>
-          ) : (
-            <p className="text-dark-400">{t('profile.notifications.unavailable')}</p>
           )}
         </Card>
+
+        <button
+          type="button"
+          onClick={logout}
+          className="flex min-h-12 w-full items-center gap-3 rounded-[var(--bento-radius)] border border-error-500/20 bg-error-500/5 px-4 text-left text-sm font-medium text-error-400 transition-colors hover:bg-error-500/10"
+        >
+          <LogoutIcon className="h-5 w-5" />
+          {t('nav.logout')}
+        </button>
       </motion.div>
     </motion.div>
   );

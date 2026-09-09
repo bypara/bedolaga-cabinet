@@ -1,25 +1,30 @@
 import { useTranslation } from 'react-i18next';
-import { StarIcon } from '@/components/icons';
 
 /**
  * Отметка периода, выбранного оператором как самый выгодный.
  *
- * Цвет намеренно не accent и не success: accent уже означает «этот вариант
- * выбран», success — размер скидки. Третий смысл третьим цветом, иначе рядом со
- * скидкой «−25 %» отметка читается как её продолжение.
+ * Плашка врезана в верхнюю границу карточки и не навязывает конкретную
+ * пиктограмму: подпись полностью задаётся переводом/настройкой проекта.
  */
-export function BestValueBadge({ className }: { className?: string }) {
+export function BestValueBadge({
+  className,
+  side = 'right',
+}: {
+  className?: string;
+  side?: 'left' | 'right';
+}) {
   const { t } = useTranslation();
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full bg-urgent-400/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-urgent-400 ${className ?? ''}`}
+      className={`pointer-events-none absolute top-0 z-10 -translate-y-1/2 whitespace-nowrap rounded-full border border-accent-400/40 bg-dark-900 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-accent-300 shadow-sm light:bg-champagne-100 ${
+        side === 'left' ? 'left-4' : 'right-4'
+      } ${className ?? ''}`}
     >
-      <StarIcon filled className="h-3 w-3" />
       {t('subscription.bestValue')}
     </span>
   );
 }
 
 /** Цвет рамки выделенного периода — тот же токен, что и у отметки. */
-export const BEST_VALUE_BORDER = 'rgb(var(--color-urgent-400))';
+export const BEST_VALUE_BORDER = 'rgb(var(--color-accent-400))';

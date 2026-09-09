@@ -177,17 +177,17 @@ export function TariffPickerGrid({
             return (
               <div
                 key={tariff.id}
-                className={`bento-card-hover p-5 text-left transition-all ${
+                className={`bento-card-hover relative p-5 text-left transition-all ${
                   isCurrentTariff
                     ? 'bento-card-glow border-accent-500'
                     : tariff.is_highlighted
                       ? // Текущий тариф важнее подсказки: две «активные» рамки
                         // сразу не дают понять, что именно сейчас куплено.
-                        'border-2 border-urgent-400'
+                        'border-2 border-accent-400/70 pt-7 shadow-[0_0_24px_rgba(var(--color-accent-500),0.08)]'
                       : ''
                 }`}
               >
-                {tariff.is_highlighted && !isCurrentTariff && <BestValueBadge className="mb-2" />}
+                {tariff.is_highlighted && !isCurrentTariff && <BestValueBadge />}
                 <div className="mb-3 flex items-start justify-between">
                   <div>
                     <div className="text-lg font-semibold text-dark-100">{tariff.name}</div>

@@ -162,9 +162,9 @@ export default function RenewSubscription() {
                   setSelectedPeriod(option.period_days);
                   setError(null);
                 }}
-                className={`w-full rounded-2xl p-4 text-left transition-all duration-200 ${
+                className={`relative w-full rounded-2xl p-4 text-left transition-all duration-200 ${
                   isBestValue && !isSelected ? 'border-2' : 'border'
-                }`}
+                } ${isBestValue ? 'pt-6' : ''}`}
                 style={{
                   background: isSelected
                     ? isDark
@@ -178,7 +178,7 @@ export default function RenewSubscription() {
                       : g.cardBorder,
                 }}
               >
-                {isBestValue && <BestValueBadge className="mb-2" />}
+                {isBestValue && <BestValueBadge />}
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-base font-semibold" style={{ color: g.text }}>

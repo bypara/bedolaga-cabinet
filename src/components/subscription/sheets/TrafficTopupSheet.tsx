@@ -138,7 +138,7 @@ export function TrafficTopupSheet({
                     ? '♾️ ' + t('subscription.additionalOptions.unlimited')
                     : `${pkg.gb} ${t('common.units.gb')}`}
                 </div>
-                {pkg.discount_percent && pkg.discount_percent > 0 && (
+                {(pkg.discount_percent ?? 0) > 0 && (
                   <div className="mb-1">
                     <span className="inline-block rounded-full bg-success-500/20 px-2 py-0.5 text-xs font-medium text-success-400">
                       -{pkg.discount_percent}%

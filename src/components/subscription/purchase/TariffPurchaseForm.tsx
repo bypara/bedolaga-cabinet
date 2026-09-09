@@ -360,9 +360,9 @@ export function TariffPurchaseForm({
                         selectedTariffPeriod?.days === period.days && !useCustomDays
                           ? 'border border-accent-500 bg-accent-500/10'
                           : period.is_highlighted
-                            ? 'border-2 border-urgent-400 bg-dark-800/50'
+                            ? 'border-2 border-accent-400/70 bg-dark-800/50'
                             : 'border border-dark-700/50 bg-dark-800/50 hover:border-dark-600'
-                      }`}
+                      } ${period.is_highlighted ? 'pt-6' : ''}`}
                     >
                       {displayDiscount && displayDiscount > 0 && (
                         <div
@@ -389,8 +389,8 @@ export function TariffPurchaseForm({
                           {formatPrice(displayPerMonth)}/{t('subscription.month')}
                         </div>
                       )}
-                      {/* Под ценой, а не в углу: правый верхний угол занят скидкой. */}
-                      {period.is_highlighted && <BestValueBadge className="mt-2" />}
+                      {/* Справа уже может находиться скидка, поэтому метка закреплена слева. */}
+                      {period.is_highlighted && <BestValueBadge side="left" />}
                     </button>
                   );
                 })}

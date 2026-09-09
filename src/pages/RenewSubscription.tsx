@@ -164,7 +164,7 @@ export default function RenewSubscription() {
                 }}
                 className={`relative w-full rounded-2xl p-4 text-left transition-all duration-200 ${
                   isBestValue && !isSelected ? 'border-2' : 'border'
-                } ${isBestValue ? 'pt-6' : ''}`}
+                }`}
                 style={{
                   background: isSelected
                     ? isDark

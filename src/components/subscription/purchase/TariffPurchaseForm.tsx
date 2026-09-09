@@ -362,7 +362,7 @@ export function TariffPurchaseForm({
                           : period.is_highlighted
                             ? 'border-2 border-accent-400/70 bg-dark-800/50'
                             : 'border border-dark-700/50 bg-dark-800/50 hover:border-dark-600'
-                      } ${period.is_highlighted ? 'pt-6' : ''}`}
+                      }`}
                     >
                       {displayDiscount && displayDiscount > 0 && (
                         <div

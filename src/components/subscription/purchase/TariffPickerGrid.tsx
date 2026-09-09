@@ -183,7 +183,7 @@ export function TariffPickerGrid({
                     : tariff.is_highlighted
                       ? // Текущий тариф важнее подсказки: две «активные» рамки
                         // сразу не дают понять, что именно сейчас куплено.
-                        'border-2 border-accent-400/70 pt-7 shadow-[0_0_24px_rgba(var(--color-accent-500),0.08)]'
+                        'overflow-visible border-2 border-accent-400/70 shadow-[0_0_24px_rgba(var(--color-accent-500),0.08)] [&::after]:rounded-[inherit]'
                       : ''
                 }`}
               >

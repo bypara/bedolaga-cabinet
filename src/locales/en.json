@@ -6033,7 +6033,7 @@
       },
       "balance": {
         "title": "Your Balance",
-        "description": "Your current balance is displayed here. Click to top it up."
+        "description": "Your balance is shown on the profile button. Open your profile to top it up or view its history."
       },
       "subscription": {
         "title": "Subscription Status",

@@ -770,7 +770,7 @@ export default function Info() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <WebBackButton
-          to="/"
+          to="/profile"
           showInTelegram
           className="flex h-10 w-10 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
         />

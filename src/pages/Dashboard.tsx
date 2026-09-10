@@ -33,7 +33,6 @@ import {
   ShieldIcon,
   StarIcon,
   UserIcon,
-  WalletIcon,
 } from '@/components/icons';
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { safeLocal } from '../utils/safeStorage';
@@ -331,34 +330,30 @@ export default function Dashboard() {
       <EmailLinkReminder />
 
       {/* Mobile dashboard is the navigation: large targets replace the crowded bottom bar. */}
-      <div className="grid grid-cols-2 gap-3 lg:hidden">
-        <Link
-          to="/balance"
-          data-onboarding="balance"
-          className="flex min-h-28 flex-col justify-between rounded-3xl border border-dark-700/70 bg-dark-900/70 p-4 transition-colors active:bg-dark-800"
-        >
-          <span className="text-lg font-semibold text-dark-100">
-            {formatAmount(balanceData?.balance_rubles || 0)} {currencySymbol}
-          </span>
-          <span className="flex items-end justify-between gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-dark-800 text-dark-400">
-              <WalletIcon className="h-5 w-5" />
-            </span>
-            <span className="text-xs font-medium text-dark-500">{t('nav.balance')}</span>
-          </span>
-        </Link>
-
+      <div className="lg:hidden">
         <Link
           to="/profile"
-          className="flex min-h-28 flex-col justify-between rounded-3xl border border-dark-700/70 bg-dark-900/70 p-4 transition-colors active:bg-dark-800"
+          data-onboarding="balance"
+          className="flex min-h-24 items-center gap-3 rounded-3xl border border-dark-700/70 bg-dark-900/70 p-4 transition-colors active:bg-dark-800"
         >
-          <span className="truncate text-lg font-semibold text-dark-100">{userName}</span>
-          <span className="flex items-end justify-between gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-dark-800 text-dark-400">
-              <UserIcon className="h-5 w-5" />
-            </span>
-            <span className="text-xs font-medium text-dark-500">{t('nav.profile')}</span>
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-dark-800 text-accent-400">
+            <UserIcon className="h-6 w-6" />
           </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-base font-semibold text-dark-100">{userName}</span>
+            <span className="mt-0.5 block text-xs font-medium text-dark-500">
+              {t('nav.profile')}
+            </span>
+          </span>
+          <span className="max-w-[45%] shrink-0 text-right">
+            <span className="block truncate text-base font-semibold text-dark-100">
+              {formatAmount(balanceData?.balance_rubles || 0)} {currencySymbol}
+            </span>
+            <span className="mt-0.5 block text-xs font-medium text-dark-500">
+              {t('nav.balance')}
+            </span>
+          </span>
+          <ChevronRightIcon className="h-5 w-5 shrink-0 text-dark-500" />
         </Link>
       </div>
 

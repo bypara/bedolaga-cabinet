@@ -5440,7 +5440,7 @@
       },
       "balance": {
         "title": "您的余额",
-        "description": "这里显示您的当前余额。点击可充值。"
+        "description": "余额会直接显示在个人资料按钮上。打开个人资料即可充值或查看记录。"
       },
       "subscription": {
         "title": "订阅状态",

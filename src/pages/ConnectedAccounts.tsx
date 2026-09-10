@@ -18,6 +18,7 @@ import { useAuthStore } from '../store/auth';
 import { isValidEmail } from '../utils/validation';
 import type { LinkedProvider } from '../types';
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
+import { WebBackButton } from '../components/WebBackButton';
 
 const OAUTH_PROVIDERS = ['google', 'yandex', 'discord', 'vk'];
 
@@ -654,9 +655,16 @@ export default function ConnectedAccounts() {
     >
       {/* Page title */}
       <motion.div variants={staggerItem}>
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">
-          {t('profile.accounts.title')}
-        </h1>
+        <div className="flex items-center gap-3">
+          <WebBackButton
+            to="/profile"
+            showInTelegram
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+          />
+          <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">
+            {t('profile.accounts.title')}
+          </h1>
+        </div>
         <p className="mt-1 text-dark-400">{t('profile.accounts.subtitle')}</p>
       </motion.div>
 

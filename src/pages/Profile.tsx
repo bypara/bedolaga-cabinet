@@ -13,6 +13,7 @@ import { isValidEmail } from '../utils/validation';
 import { useCountdown } from '../hooks/useCountdown';
 import { useTheme } from '../hooks/useTheme';
 import { useUserAvatar } from '../hooks/useUserAvatar';
+import { useCurrency } from '../hooks/useCurrency';
 import { getApiErrorMessage } from '../utils/api-error';
 import {
   notificationsApi,
@@ -20,6 +21,7 @@ import {
   type NotificationSettingsUpdate,
 } from '../api/notifications';
 import { referralApi } from '../api/referral';
+import { balanceApi } from '../api/balance';
 import { brandingApi, type EmailAuthEnabled } from '../api/branding';
 import { themeColorsApi } from '../api/themeColors';
 import { UI } from '../config/constants';
@@ -42,6 +44,7 @@ import {
   SunIcon,
   UserIcon,
   UsersIcon,
+  WalletIcon,
 } from '@/components/icons';
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 
@@ -55,6 +58,7 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const avatar = useUserAvatar(user);
   const { isDark, toggleTheme } = useTheme();
+  const { formatAmount, currencySymbol } = useCurrency();
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -81,6 +85,11 @@ export default function Profile() {
   const { data: referralTerms } = useQuery({
     queryKey: ['referral-terms'],
     queryFn: referralApi.getReferralTerms,
+  });
+
+  const { data: balanceData } = useQuery({
+    queryKey: ['balance'],
+    queryFn: balanceApi.getBalance,
   });
 
   const { data: branding } = useQuery({
@@ -356,7 +365,23 @@ export default function Profile() {
 
       {/* Profile sections */}
       <motion.div variants={staggerItem}>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+          <Link
+            to="/balance"
+            className="group flex min-h-28 flex-col justify-between rounded-[var(--bento-radius)] border border-dark-700/40 bg-dark-900/70 p-4 transition-colors hover:border-accent-500/30 hover:bg-dark-800/60"
+          >
+            <WalletIcon className="h-6 w-6 text-accent-400" />
+            <div className="flex items-end justify-between gap-2">
+              <div className="min-w-0">
+                <span className="block font-medium text-dark-100">{t('nav.balance')}</span>
+                <span className="block truncate text-xs text-dark-500">
+                  {formatAmount(balanceData?.balance_rubles || 0)} {currencySymbol}
+                </span>
+              </div>
+              <ArrowRightIcon className="h-4 w-4 shrink-0 text-dark-500 transition-transform group-hover:translate-x-0.5" />
+            </div>
+          </Link>
+
           <Link
             to="/profile/accounts"
             className="group flex min-h-28 flex-col justify-between rounded-[var(--bento-radius)] border border-dark-700/40 bg-dark-900/70 p-4 transition-colors hover:border-accent-500/30 hover:bg-dark-800/60"

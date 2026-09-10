@@ -19,6 +19,7 @@ import { ToastProvider } from './components/Toast';
 import { TooltipProvider } from './components/primitives/Tooltip';
 import { isInTelegramWebApp, closeTelegramApp } from './hooks/useTelegramSDK';
 import { getFallbackParentPath } from './utils/navigation';
+import { subscriptionPurchasePath } from './utils/subscriptionNavigation';
 import { subscriptionApi } from './api/subscription';
 import { useBlockingStore } from './store/blocking';
 
@@ -179,7 +180,10 @@ const START_PARAM_ROUTES: Array<{ re: RegExp; to: (match: RegExpExecArray) => st
   // Admin ticket notification buttons in group chats (bot issue #2988).
   { re: /^admin_ticket_(\d+)$/, to: (match) => `/admin/tickets/${match[1]}` },
   // «Продлить» links for expired subscriptions in the bot's rich main menu.
-  { re: /^renew_(\d+)$/, to: (match) => `/subscriptions/${match[1]}/renew` },
+  {
+    re: /^renew_(\d+)$/,
+    to: (match) => subscriptionPurchasePath(Number(match[1])),
+  },
   { re: /^subscriptions$/, to: () => '/subscriptions' },
   // Paid-trial «Активировать триал» link in the bot's rich main menu — the
   // dashboard renders TrialOfferCard with the pay-and-activate flow.

@@ -14,7 +14,7 @@ import type { Subscription } from '@/types';
  * продаётся, сервер отвечал «период недоступен» — кнопка выглядела сломанной.
  *
  * Здесь держится разделение: где выбирать нечего (суточный тариф, приостановка)
- * — списываем сразу; обычной подписке открываем выбор периода её тарифа.
+ * — списываем сразу; обычной подписке открываем общий выбор тарифа.
  */
 
 vi.mock('react-i18next', () => ({
@@ -109,7 +109,7 @@ async function renderCard(sub: Subscription, balanceKopeks: number) {
         <MemoryRouter initialEntries={['/']}>
           <Routes>
             <Route path="/" element={<Card subscription={sub} balanceKopeks={balanceKopeks} />} />
-            <Route path="/subscriptions/:id/renew" element={<div>экран выбора периода</div>} />
+            <Route path="/subscription/purchase" element={<div>экран выбора тарифа</div>} />
           </Routes>
         </MemoryRouter>
       </PlatformProvider>
@@ -118,24 +118,24 @@ async function renderCard(sub: Subscription, balanceKopeks: number) {
 }
 
 describe('обычная истёкшая подписка', () => {
-  it('открывает выбор периода вместо молчаливого списания за месяц', async () => {
+  it('открывает выбор тарифа вместо молчаливого списания за месяц', async () => {
     await renderCard(subscription(), 500000);
 
     const renew = await screen.findByText('dashboard.expired.quickRenew');
     fireEvent.click(renew);
 
-    expect(await screen.findByText('экран выбора периода')).toBeTruthy();
+    expect(await screen.findByText('экран выбора тарифа')).toBeTruthy();
     expect(calls.renew).toEqual([]);
     expect(calls.purchaseTariff).toEqual([]);
   });
 
-  it('ведёт на выбор периода и без денег на балансе — цены надо сначала увидеть', async () => {
+  it('ведёт на выбор тарифа и без денег на балансе — цены надо сначала увидеть', async () => {
     await renderCard(subscription(), 0);
 
     const renew = await screen.findByText('dashboard.expired.quickRenew');
     fireEvent.click(renew);
 
-    expect(await screen.findByText('экран выбора периода')).toBeTruthy();
+    expect(await screen.findByText('экран выбора тарифа')).toBeTruthy();
   });
 });
 

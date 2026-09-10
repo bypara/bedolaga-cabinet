@@ -37,6 +37,15 @@ export interface LegacyTariffNoticeInput {
   tariffId?: number | null;
 }
 
+export interface BalanceAutopayAvailabilityInput {
+  status?: string | null;
+  isTrial?: boolean;
+  isDaily?: boolean;
+  isEnabled?: boolean;
+  isTariffsMode?: boolean;
+  tariffId?: number | null;
+}
+
 const presentations: Record<
   SubscriptionStatusKind,
   Omit<SubscriptionStatusPresentation, 'kind'>
@@ -181,4 +190,19 @@ export function getSubscriptionStatusPresentation(
  */
 export function shouldShowLegacyTariffNotice(input: LegacyTariffNoticeInput): boolean {
   return input.status?.toLowerCase() === 'active' && input.isTrial !== true && !input.tariffId;
+}
+
+/**
+ * Balance auto-renewal is useful only for a running paid subscription. Keep an
+ * already-enabled switch visible in every state so the user can always turn it
+ * off, but do not offer an action that the backend is guaranteed to reject.
+ */
+export function canConfigureBalanceAutopay(input: BalanceAutopayAvailabilityInput): boolean {
+  if (input.isEnabled) return true;
+
+  const status = input.status?.toLowerCase();
+  const isRunning = status === 'active' || status === 'limited';
+  const hasRequiredTariff = input.isTariffsMode !== true || Boolean(input.tariffId);
+
+  return isRunning && input.isTrial !== true && input.isDaily !== true && hasRequiredTariff;
 }

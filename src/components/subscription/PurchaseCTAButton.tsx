@@ -3,16 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { HoverBorderGradient } from '../ui/hover-border-gradient';
 import { ChevronRightIcon, SubscriptionIcon } from '@/components/icons';
 import type { Subscription } from '../../types';
+import { subscriptionPurchasePath } from '../../utils/subscriptionNavigation';
 
 interface PurchaseCTAButtonProps {
   subscription: Subscription | null;
-  /** In multi-tariff mode, link to /subscriptions/:id/renew instead of /subscription/purchase */
+  /** Used to adjust copy for installations that allow multiple subscriptions. */
   isMultiTariff?: boolean;
+  compact?: boolean;
 }
 
 export default function PurchaseCTAButton({
   subscription,
   isMultiTariff = false,
+  compact = false,
 }: PurchaseCTAButtonProps) {
   const { t } = useTranslation();
 
@@ -41,14 +44,24 @@ export default function PurchaseCTAButton({
         ? t('subscription.cta.renewHint', 'Продление подписки')
         : t('subscription.cta.activeHint');
 
-  // Trial → purchase page (buy a real tariff, trial can't be renewed)
-  // Multi-tariff active → per-subscription renew page
-  // Otherwise → purchase page
-  const linkTo = isTrial
-    ? '/subscription/purchase'
-    : isMultiTariff && subscription?.id
-      ? `/subscriptions/${subscription.id}/renew`
-      : '/subscription/purchase';
+  // Renewal uses the same tariff-first flow as a new purchase. Passing the
+  // subscription ID keeps the operation attached to the exact subscription.
+  const linkTo = subscriptionPurchasePath(subscription?.id);
+
+  if (compact) {
+    return (
+      <Link
+        to={linkTo}
+        className="group inline-flex min-h-10 items-center gap-2 rounded-xl border border-accent-500/30 bg-accent-500/10 px-3 py-2 text-xs font-medium text-accent-300 transition-colors hover:bg-accent-500/15"
+      >
+        <SubscriptionIcon className="h-4 w-4" />
+        <span>
+          {isMultiTariff && !isExpired && !isTrial ? t('subscription.manageTariff') : buttonText}
+        </span>
+        <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+      </Link>
+    );
+  }
 
   return (
     <Link to={linkTo} className="block">

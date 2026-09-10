@@ -108,7 +108,8 @@ export function TariffPickerGrid({
       {isMultiTariff &&
         purchaseOptions &&
         'all_tariffs_purchased' in purchaseOptions &&
-        purchaseOptions.all_tariffs_purchased && (
+        purchaseOptions.all_tariffs_purchased &&
+        !subscription && (
           <div
             className="rounded-2xl border p-6 text-center"
             style={{ background: g.cardBg, borderColor: g.cardBorder }}
@@ -135,7 +136,9 @@ export function TariffPickerGrid({
         {[...tariffs]
           .filter((tariff) => {
             // In multi-tariff mode: hide already purchased tariffs
-            if (isMultiTariff && tariff.is_purchased) return false;
+            if (isMultiTariff && tariff.is_purchased && tariff.id !== subscription?.tariff_id) {
+              return false;
+            }
             if (subscription?.is_trial && tariff.name.toLowerCase().includes('trial')) {
               return false;
             }

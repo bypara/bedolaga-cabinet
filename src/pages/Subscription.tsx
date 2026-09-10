@@ -23,6 +23,10 @@ import {
   CheckIcon,
   PauseIcon,
   CalendarIcon,
+  DevicesIcon,
+  TrafficIcon,
+  SettingsIcon,
+  ChevronRightIcon,
   RefreshIcon,
   DownloadIcon,
   TrashIcon,
@@ -57,45 +61,10 @@ import { DeleteSubscriptionSheet } from '../components/subscription/sheets/Delet
 import { PageSkeleton, Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { safeLocal } from '../utils/safeStorage';
 import { SubscriptionStatusBadge } from '../components/subscription/SubscriptionStatusBadge';
-import { getSubscriptionStatusPresentation } from '../utils/subscriptionStatus';
-
-/** A calm expiry summary. A second-by-second countdown is only useful close to expiry. */
-function SubscriptionExpiry({ endDate, isActive }: { endDate: string; isActive: boolean }) {
-  const { t } = useTranslation();
-  const daysLeft = Math.max(0, Math.ceil((new Date(endDate).getTime() - Date.now()) / 86_400_000));
-  const isUrgent = isActive && daysLeft <= 14;
-
-  const formattedDate = new Date(endDate).toLocaleDateString(uiLocale(), {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-dark-700/60 bg-dark-800/45 px-3.5 py-3">
-      <span
-        className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${
-          !isActive
-            ? 'bg-error-500/10 text-error-400'
-            : isUrgent
-              ? 'bg-warning-500/10 text-warning-400'
-              : 'bg-dark-700/70 text-dark-400'
-        }`}
-      >
-        <CalendarIcon className="h-4 w-4" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs text-dark-400">{t('subscription.expiresAt')}</span>
-        <span className="mt-0.5 block text-sm font-semibold text-dark-100">{formattedDate}</span>
-      </span>
-      {isUrgent ? (
-        <span className="text-xs font-semibold text-warning-400">
-          {t('subscription.days', { count: daysLeft })}
-        </span>
-      ) : null}
-    </div>
-  );
-}
+import {
+  canConfigureBalanceAutopay,
+  getSubscriptionStatusPresentation,
+} from '../utils/subscriptionStatus';
 
 export default function Subscription() {
   const { t } = useTranslation();
@@ -121,6 +90,7 @@ export default function Subscription() {
 
   // Device/traffic topup state
   const [showDeviceTopup, setShowDeviceTopup] = useState(false);
+  const [showDeviceLimitMenu, setShowDeviceLimitMenu] = useState(false);
   const [devicesToAdd, setDevicesToAdd] = useState(1);
   const [showDeviceReduction, setShowDeviceReduction] = useState(false);
   const [targetDeviceLimit, setTargetDeviceLimit] = useState<number>(1);
@@ -204,6 +174,22 @@ export default function Subscription() {
   });
 
   const isTariffsMode = purchaseOptions?.sales_mode === 'tariffs';
+  const minimumDeviceLimit =
+    purchaseOptions?.sales_mode === 'tariffs'
+      ? purchaseOptions.tariffs.find((tariff) => tariff.id === subscription?.tariff_id)
+          ?.device_limit
+      : purchaseOptions?.devices.min;
+  const canReduceDeviceLimit =
+    subscription !== null &&
+    minimumDeviceLimit !== undefined &&
+    subscription.device_limit > minimumDeviceLimit;
+  const hasAdditionalOptions =
+    subscription !== null &&
+    (subscription.is_active || subscription.is_limited) &&
+    !subscription.is_trial &&
+    (subscription.device_limit !== 0 ||
+      subscription.traffic_limit_gb > 0 ||
+      purchaseOptions?.sales_mode === 'classic');
 
   // SBP (Platega) recurring auto-payment status. Polls every 8s while a
   // payment is PENDING (waiting for bank-app confirmation) so the UI flips
@@ -296,6 +282,20 @@ export default function Subscription() {
     lavaInfo !== undefined || lavaFeatureDisabled
       ? lavaUiState(lavaInfo, lavaFeatureDisabled)
       : 'hidden';
+  const canConfigureAutopay =
+    subscription !== null &&
+    canConfigureBalanceAutopay({
+      status: subscription.status,
+      isTrial: subscription.is_trial,
+      isDaily: subscription.is_daily,
+      isEnabled: subscription.autopay_enabled,
+      isTariffsMode,
+      tariffId: subscription.tariff_id,
+    });
+  const hasSubscriptionSettings =
+    Boolean(subscription?.servers?.length) ||
+    canConfigureAutopay ||
+    (!subscription?.is_trial && (sbpUiStateValue !== 'hidden' || lavaUiStateValue !== 'hidden'));
 
   const enableLavaMutation = useMutation({
     mutationFn: () => subscriptionApi.enableLavaRecurring(subscriptionId),
@@ -362,6 +362,14 @@ export default function Subscription() {
       // the SBP block doesn't keep showing a now-stale 'active'/'pending' state.
       queryClient.invalidateQueries({ queryKey: ['sbp-recurring', subscriptionId] });
     },
+    onError: () => {
+      showToast({
+        type: 'error',
+        title: t('subscription.autopayUpdateError'),
+        message: '',
+        duration: 3000,
+      });
+    },
   });
 
   // Devices query
@@ -424,6 +432,7 @@ export default function Subscription() {
   // Auto-close all modals/forms when success notification appears
   const handleCloseAllModals = useCallback(() => {
     setShowDeviceTopup(false);
+    setShowDeviceLimitMenu(false);
     setShowDeviceReduction(false);
     setShowTrafficTopup(false);
     setShowServerManagement(false);
@@ -592,11 +601,7 @@ export default function Subscription() {
       {/* Page title */}
       <div className="flex items-center gap-3">
         <WebBackButton to={isMultiTariff ? '/subscriptions' : '/'} />
-        <h1 className="text-xl font-bold text-dark-50 sm:text-2xl">
-          {isMultiTariff && subscription?.tariff_name
-            ? subscription.tariff_name
-            : t('subscription.title')}
-        </h1>
+        <h1 className="text-xl font-bold text-dark-50 sm:text-2xl">{t('subscription.title')}</h1>
       </div>
 
       {/* Current Subscription */}
@@ -636,32 +641,18 @@ export default function Subscription() {
                   header badge. */}
 
               {/* ─── Header ─── */}
-              <div className="mb-5 flex items-start justify-between gap-3">
-                <div>
-                  <SubscriptionStatusBadge
-                    status={subscription.status}
-                    isTrial={subscription.is_trial}
-                    isDaily={subscription.is_daily}
-                    isDailyPaused={subscription.is_daily_paused}
-                    isExpired={subscription.is_expired}
-                    daysLeft={subscription.days_left}
-                    className="mb-2"
-                  />
-
-                  {/* Plan name */}
-                  <h2 className="text-lg font-bold tracking-tight text-dark-50">
-                    {subscription.tariff_name || t('subscription.currentPlan')}
-                  </h2>
-                </div>
-
-                <span className="shrink-0 rounded-full bg-dark-800 px-2.5 py-1 text-[11px] font-medium text-dark-300 ring-1 ring-dark-700/70">
-                  {subscription.device_limit === 0
-                    ? t('dashboard.devicesConnectedUnlimited', { used: connectedDevices })
-                    : t('dashboard.devicesOfMax', {
-                        used: connectedDevices,
-                        max: subscription.device_limit,
-                      })}
-                </span>
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-lg font-bold tracking-tight text-dark-50">
+                  {subscription.tariff_name || t('subscription.currentPlan')}
+                </h2>
+                <SubscriptionStatusBadge
+                  status={subscription.status}
+                  isTrial={subscription.is_trial}
+                  isDaily={subscription.is_daily}
+                  isDailyPaused={subscription.is_daily_paused}
+                  isExpired={subscription.is_expired}
+                  daysLeft={subscription.days_left}
+                />
               </div>
 
               {/* The badge already names the state; this note only explains the next step. */}
@@ -680,130 +671,136 @@ export default function Subscription() {
                 </div>
               )}
 
-              {/* ─── Traffic Progress ─── */}
-              <div className="mb-5">
-                <div className="mb-2.5 flex items-center justify-between">
-                  <span className="text-[11px] font-medium uppercase tracking-wider text-dark-400">
-                    {t('subscription.traffic')}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-[11px] text-dark-400">
-                      {isUnlimited
-                        ? formatTraffic(usedGb)
-                        : `${formatTraffic(usedGb)} / ${formatTraffic(subscription.traffic_limit_gb)}`}
+              {/* ─── At-a-glance summary ─── */}
+              <div className="mb-3 grid grid-cols-2 gap-2.5 lg:grid-cols-3">
+                <div
+                  className="col-span-2 min-w-0 rounded-2xl p-3.5 lg:col-span-1"
+                  style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2 text-xs font-medium text-dark-400">
+                      <TrafficIcon className="h-4 w-4 text-accent-400" />
+                      {t('subscription.traffic')}
                     </span>
                     <button
                       onClick={() => refreshTrafficMutation.mutate()}
                       disabled={refreshTrafficMutation.isPending || trafficRefreshCooldown > 0}
-                      className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-dark-400 transition-colors hover:bg-dark-50/[0.05] hover:text-dark-50/50 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex min-h-7 items-center gap-1 rounded-lg px-2 text-[10px] font-medium text-dark-400 transition-colors hover:bg-dark-50/[0.05] hover:text-dark-200 disabled:cursor-not-allowed disabled:opacity-50"
+                      aria-label={t('common.refresh')}
                     >
                       <RefreshIcon
                         className="h-3 w-3"
                         spinning={refreshTrafficMutation.isPending}
                       />
-                      {trafficRefreshCooldown > 0
-                        ? `${trafficRefreshCooldown}s`
-                        : t('common.refresh')}
+                      {trafficRefreshCooldown > 0 ? `${trafficRefreshCooldown}s` : null}
                     </button>
                   </div>
+                  <div className="mb-2 truncate text-sm font-semibold text-dark-100">
+                    {isUnlimited
+                      ? `${formatTraffic(usedGb)} · ${t('subscription.unlimited')}`
+                      : `${formatTraffic(usedGb)} ${t('subscription.of')} ${formatTraffic(subscription.traffic_limit_gb)}`}
+                  </div>
+                  <TrafficProgressBar
+                    usedGb={usedGb}
+                    limitGb={subscription.traffic_limit_gb}
+                    percent={usedPercent}
+                    isUnlimited={isUnlimited}
+                    compact
+                  />
+                  {subscription.traffic_reset_mode &&
+                    subscription.traffic_reset_mode !== 'NO_RESET' && (
+                      <div className="mt-2 text-[10px] text-dark-500">
+                        {t(`subscription.trafficReset.${subscription.traffic_reset_mode}`)}
+                      </div>
+                    )}
                 </div>
-                {subscription.traffic_reset_mode &&
-                  subscription.traffic_reset_mode !== 'NO_RESET' && (
-                    <div className="mb-2 text-[10px] text-dark-400">
-                      {t(`subscription.trafficReset.${subscription.traffic_reset_mode}`)}
-                    </div>
-                  )}
-                <TrafficProgressBar
-                  usedGb={usedGb}
-                  limitGb={subscription.traffic_limit_gb}
-                  percent={usedPercent}
-                  isUnlimited={isUnlimited}
-                  compact
-                />
+
+                <div
+                  className="min-w-0 rounded-2xl p-3.5"
+                  style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
+                >
+                  <span className="mb-2 flex items-center gap-2 text-xs font-medium text-dark-400">
+                    <DevicesIcon className="h-4 w-4 text-accent-400" />
+                    {t('subscription.devices')}
+                  </span>
+                  <span className="block truncate text-sm font-semibold text-dark-100">
+                    {subscription.device_limit === 0
+                      ? `${connectedDevices} · ${t('subscription.unlimited')}`
+                      : t('dashboard.devicesOfMax', {
+                          used: connectedDevices,
+                          max: subscription.device_limit,
+                        })}
+                  </span>
+                </div>
+
+                <div
+                  className="min-w-0 rounded-2xl p-3.5"
+                  style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
+                >
+                  <span className="mb-2 flex items-center gap-2 text-xs font-medium text-dark-400">
+                    <CalendarIcon className="h-4 w-4 text-accent-400" />
+                    {t('subscription.expiresAt')}
+                  </span>
+                  <span className="block truncate text-sm font-semibold text-dark-100">
+                    {new Date(subscription.end_date).toLocaleDateString(uiLocale(), {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </span>
+                  <span className="mt-1 block text-[10px] text-dark-500">
+                    {t('subscription.days', { count: subscription.days_left })}
+                  </span>
+                </div>
               </div>
 
               <div className="mb-3">
                 <ConnectDeviceTile
                   subscription={subscription}
                   connectedDevices={connectedDevices}
+                  showDeviceCount={false}
                 />
               </div>
 
               {/* ─── Link actions ─── */}
-              {(displayedConnectionUrl ||
-                ((subscription.is_active || subscription.is_limited) &&
-                  !subscription.is_trial)) && (
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  {displayedConnectionUrl && !shouldHideConnectionLink && (
-                    <button
-                      onClick={copyUrl}
-                      className="flex items-center gap-2 rounded-xl border border-dark-700/60 bg-dark-800/40 px-3 py-2 text-xs font-medium text-dark-300 transition-colors hover:bg-dark-800 hover:text-dark-100"
-                      aria-label={t('subscription.copyLink')}
-                      title={t('subscription.copyLink')}
-                    >
-                      {copied ? <CheckIcon /> : <CopyIcon />}
-                      {copied ? t('subscription.copied') : t('subscription.copyLink')}
-                    </button>
-                  )}
-                  {(subscription.is_active || subscription.is_limited) &&
-                    !subscription.is_trial && (
-                      <button
-                        type="button"
-                        onClick={handleRevoke}
-                        disabled={revokeMutation.isPending || revokeCooldown > 0}
-                        className="flex items-center gap-2 rounded-xl border border-warning-500/25 bg-warning-500/[0.07] px-3 py-2 text-xs font-medium text-warning-400 transition-colors hover:bg-warning-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <RefreshIcon className="h-3.5 w-3.5" spinning={revokeMutation.isPending} />
-                        {revokeCooldown > 0
-                          ? t('subscription.revoke.cooldown', {
-                              minutes: Math.floor(revokeCooldown / 60),
-                              seconds: revokeCooldown % 60,
-                            })
-                          : t('subscription.revoke.button')}
-                      </button>
-                    )}
-                </div>
-              )}
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <PurchaseCTAButton
+                  subscription={subscription}
+                  isMultiTariff={isMultiTariff}
+                  compact
+                />
+                {displayedConnectionUrl && !shouldHideConnectionLink && (
+                  <button
+                    onClick={copyUrl}
+                    className="flex min-h-10 items-center gap-2 rounded-xl border border-dark-700/60 bg-dark-800/40 px-3 py-2 text-xs font-medium text-dark-300 transition-colors hover:bg-dark-800 hover:text-dark-100"
+                    aria-label={t('subscription.copyLink')}
+                    title={t('subscription.copyLink')}
+                  >
+                    {copied ? <CheckIcon /> : <CopyIcon />}
+                    {copied ? t('subscription.copied') : t('subscription.copyLink')}
+                  </button>
+                )}
+                {(subscription.is_active || subscription.is_limited) && !subscription.is_trial && (
+                  <button
+                    type="button"
+                    onClick={handleRevoke}
+                    disabled={revokeMutation.isPending || revokeCooldown > 0}
+                    className="flex min-h-10 items-center gap-2 rounded-xl border border-dark-700/60 bg-dark-800/40 px-3 py-2 text-xs font-medium text-dark-400 transition-colors hover:border-warning-500/25 hover:bg-warning-500/[0.07] hover:text-warning-400 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <RefreshIcon className="h-3.5 w-3.5" spinning={revokeMutation.isPending} />
+                    {revokeCooldown > 0
+                      ? t('subscription.revoke.cooldown', {
+                          minutes: Math.floor(revokeCooldown / 60),
+                          seconds: revokeCooldown % 60,
+                        })
+                      : t('subscription.revoke.button')}
+                  </button>
+                )}
+              </div>
               {revokeMutation.error && (
                 <p className="mb-3 text-sm text-error-400">
                   {getErrorMessage(revokeMutation.error)}
                 </p>
-              )}
-
-              {/* ─── Countdown ─── */}
-              <div className="mb-5">
-                <SubscriptionExpiry
-                  endDate={subscription.end_date}
-                  isActive={subscription.is_active || subscription.is_limited}
-                />
-              </div>
-
-              {/* ─── Locations ─── */}
-              {subscription.servers && subscription.servers.length > 0 && (
-                <div className="mb-5">
-                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-dark-400">
-                    {t('subscription.locationsLabel')}
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {subscription.servers.map((server) => (
-                      <span
-                        key={server.uuid}
-                        className="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-1 text-[11px] font-medium text-dark-50/50"
-                        style={{
-                          background: g.innerBorder,
-                          border: `1px solid ${g.trackBg}`,
-                        }}
-                      >
-                        {server.country_code && (
-                          <span className="text-xs">{getFlagEmoji(server.country_code)}</span>
-                        )}
-                        <Twemoji options={{ className: 'twemoji', folder: 'svg', ext: '.svg' }}>
-                          {server.name}
-                        </Twemoji>
-                      </span>
-                    ))}
-                  </div>
-                </div>
               )}
 
               {/* ─── Purchased Traffic Packages ─── */}
@@ -880,8 +877,50 @@ export default function Subscription() {
                 </div>
               )}
 
+              {hasSubscriptionSettings && (
+                <div className="mb-3 mt-1 flex items-center gap-2 border-t border-dark-700/50 pt-5">
+                  <SettingsIcon className="h-4 w-4 text-accent-400" />
+                  <h3 className="text-sm font-semibold text-dark-100">
+                    {t('subscription.settingsTitle')}
+                  </h3>
+                </div>
+              )}
+
+              {/* ─── Locations ─── */}
+              {subscription.servers && subscription.servers.length > 0 && (
+                <div
+                  className="mb-3 flex flex-col justify-between gap-3 rounded-[14px] p-3.5 sm:flex-row sm:items-center"
+                  style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-dark-50">
+                      {t('subscription.locationsLabel')}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-dark-400">
+                      {t('subscription.locations', { count: subscription.servers.length })}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {subscription.servers.map((server) => (
+                      <span
+                        key={server.uuid}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium text-dark-300"
+                        style={{ background: g.innerBorder, border: `1px solid ${g.trackBg}` }}
+                      >
+                        {server.country_code && (
+                          <span className="text-xs">{getFlagEmoji(server.country_code)}</span>
+                        )}
+                        <Twemoji options={{ className: 'twemoji', folder: 'svg', ext: '.svg' }}>
+                          {server.name}
+                        </Twemoji>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* ─── Autopay Toggle ─── */}
-              {!subscription.is_trial && !subscription.is_daily && (
+              {canConfigureAutopay && (
                 <div
                   className="flex items-center justify-between rounded-[14px] p-3.5"
                   style={{
@@ -1356,7 +1395,9 @@ export default function Subscription() {
       )}
 
       {/* Purchase / Renewal CTA */}
-      <PurchaseCTAButton subscription={subscription} isMultiTariff={isMultiTariff} />
+      {!subscription && (
+        <PurchaseCTAButton subscription={subscription} isMultiTariff={isMultiTariff} />
+      )}
 
       {/* Delete expired subscription */}
       {isMultiTariff &&
@@ -1380,37 +1421,116 @@ export default function Subscription() {
         )}
 
       {/* Additional Options (Buy Devices) */}
-      {subscription &&
-        (subscription.is_active || subscription.is_limited) &&
-        !subscription.is_trial &&
-        subscription.device_limit !== 0 && (
-          <div
-            className="relative overflow-hidden rounded-3xl p-5 lg:p-6"
-            style={{
-              background: g.cardBg,
-              border: `1px solid ${g.cardBorder}`,
-              boxShadow: g.shadow,
-            }}
-          >
-            <h2 className="mb-3 text-base font-bold tracking-tight text-dark-50">
-              {t('subscription.additionalOptions.title')}
-            </h2>
+      {subscription && hasAdditionalOptions && (
+        <div
+          className="relative overflow-hidden rounded-3xl p-5 lg:p-6"
+          style={{
+            background: g.cardBg,
+            border: `1px solid ${g.cardBorder}`,
+            boxShadow: g.shadow,
+          }}
+        >
+          <h2 className="mb-3 text-base font-bold tracking-tight text-dark-50">
+            {t('subscription.additionalOptions.title')}
+          </h2>
 
-            {/* Buy Devices */}
-            <DeviceTopupSheet
-              open={showDeviceTopup}
-              onOpen={() => setShowDeviceTopup(true)}
-              onClose={() => setShowDeviceTopup(false)}
-              subscription={subscription}
-              subscriptionId={subscriptionId}
-              devicesToAdd={devicesToAdd}
-              onDevicesToAddChange={setDevicesToAdd}
-              purchaseOptions={purchaseOptions}
-              isDark={isDark}
-            />
+          {/* Unified device-limit management */}
+          {subscription.device_limit !== 0 &&
+            !showDeviceTopup &&
+            !showDeviceReduction &&
+            (showDeviceLimitMenu ? (
+              <div
+                className="rounded-xl p-4"
+                style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
+              >
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-dark-100">
+                      {t('subscription.additionalOptions.changeDeviceLimit')}
+                    </div>
+                    <div className="mt-1 text-sm text-dark-400">
+                      {t('subscription.additionalOptions.currentDeviceLimit', {
+                        count: subscription.device_limit,
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeviceLimitMenu(false)}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-dark-400 transition-colors hover:bg-dark-700/50 hover:text-dark-100"
+                    aria-label={t('common.close')}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeviceLimitMenu(false);
+                      setShowDeviceTopup(true);
+                    }}
+                    className="flex min-h-14 items-center justify-between rounded-xl border border-dark-700/50 bg-dark-800/50 px-4 text-left text-sm font-medium text-dark-100 transition-colors hover:border-accent-500/30 hover:bg-dark-800"
+                  >
+                    {t('subscription.additionalOptions.buyDevices')}
+                    <ChevronRightIcon className="h-4 w-4 text-dark-400" />
+                  </button>
+                  {canReduceDeviceLimit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDeviceLimitMenu(false);
+                        setShowDeviceReduction(true);
+                      }}
+                      className="flex min-h-14 items-center justify-between rounded-xl border border-dark-700/50 bg-dark-800/50 px-4 text-left text-sm font-medium text-dark-100 transition-colors hover:border-accent-500/30 hover:bg-dark-800"
+                    >
+                      {t('subscription.additionalOptions.reduceDevices')}
+                      <ChevronRightIcon className="h-4 w-4 text-dark-400" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  if (canReduceDeviceLimit) {
+                    setShowDeviceLimitMenu(true);
+                  } else {
+                    setShowDeviceTopup(true);
+                  }
+                }}
+                className="group flex w-full items-center justify-between rounded-xl border border-dark-700/50 bg-dark-800/50 p-4 text-left transition-colors hover:border-dark-600 hover:bg-dark-800"
+              >
+                <div>
+                  <div className="font-medium text-dark-100">
+                    {t('subscription.additionalOptions.changeDeviceLimit')}
+                  </div>
+                  <div className="mt-1 text-sm text-dark-400">
+                    {t('subscription.additionalOptions.currentDeviceLimit', {
+                      count: subscription.device_limit,
+                    })}
+                  </div>
+                </div>
+                <ChevronRightIcon className="h-5 w-5 text-dark-400 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            ))}
 
-            {/* Reduce Devices */}
-            <div className="mt-2">
+          {subscription.device_limit !== 0 && (
+            <>
+              <DeviceTopupSheet
+                open={showDeviceTopup}
+                onOpen={() => setShowDeviceTopup(true)}
+                onClose={() => setShowDeviceTopup(false)}
+                subscription={subscription}
+                subscriptionId={subscriptionId}
+                devicesToAdd={devicesToAdd}
+                onDevicesToAddChange={setDevicesToAdd}
+                purchaseOptions={purchaseOptions}
+                isDark={isDark}
+                hideTrigger
+              />
+
               <DeviceReductionSheet
                 open={showDeviceReduction}
                 onOpen={() => setShowDeviceReduction(true)}
@@ -1420,44 +1540,46 @@ export default function Subscription() {
                 targetDeviceLimit={targetDeviceLimit}
                 onTargetDeviceLimitChange={setTargetDeviceLimit}
                 isDark={isDark}
+                hideTrigger
+              />
+            </>
+          )}
+
+          {/* Buy Traffic */}
+          {subscription.traffic_limit_gb > 0 && (
+            <div className="mt-2">
+              <TrafficTopupSheet
+                open={showTrafficTopup}
+                onOpen={() => setShowTrafficTopup(true)}
+                onClose={() => setShowTrafficTopup(false)}
+                subscription={subscription}
+                subscriptionId={subscriptionId}
+                selectedTrafficPackage={selectedTrafficPackage}
+                onSelectedTrafficPackageChange={setSelectedTrafficPackage}
+                purchaseOptions={purchaseOptions}
+                isDark={isDark}
               />
             </div>
+          )}
 
-            {/* Buy Traffic */}
-            {subscription.traffic_limit_gb > 0 && (
-              <div className="mt-2">
-                <TrafficTopupSheet
-                  open={showTrafficTopup}
-                  onOpen={() => setShowTrafficTopup(true)}
-                  onClose={() => setShowTrafficTopup(false)}
-                  subscription={subscription}
-                  subscriptionId={subscriptionId}
-                  selectedTrafficPackage={selectedTrafficPackage}
-                  onSelectedTrafficPackageChange={setSelectedTrafficPackage}
-                  purchaseOptions={purchaseOptions}
-                  isDark={isDark}
-                />
-              </div>
-            )}
-
-            {/* Server Management - only in classic mode */}
-            {!isTariffsMode && (
-              <div className="mt-2">
-                <ServerManagementSheet
-                  open={showServerManagement}
-                  onOpen={() => setShowServerManagement(true)}
-                  onClose={() => setShowServerManagement(false)}
-                  subscription={subscription}
-                  subscriptionId={subscriptionId}
-                  selectedServers={selectedServersToUpdate}
-                  onSelectedServersChange={setSelectedServersToUpdate}
-                  purchaseOptions={purchaseOptions}
-                  isDark={isDark}
-                />
-              </div>
-            )}
-          </div>
-        )}
+          {/* Server Management - only in classic mode */}
+          {!isTariffsMode && (
+            <div className="mt-2">
+              <ServerManagementSheet
+                open={showServerManagement}
+                onOpen={() => setShowServerManagement(true)}
+                onClose={() => setShowServerManagement(false)}
+                subscription={subscription}
+                subscriptionId={subscriptionId}
+                selectedServers={selectedServersToUpdate}
+                onSelectedServersChange={setSelectedServersToUpdate}
+                purchaseOptions={purchaseOptions}
+                isDark={isDark}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* My Devices Section */}
       {subscription && (devicesLoading || (devicesData?.devices.length ?? 0) > 0) && (

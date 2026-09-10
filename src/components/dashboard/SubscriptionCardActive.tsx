@@ -11,6 +11,7 @@ import { getGlassColors } from '../../utils/glassTheme';
 import type { Subscription } from '../../types';
 import { SubscriptionStatusBadge } from '../subscription/SubscriptionStatusBadge';
 import { getSubscriptionStatusPresentation } from '../../utils/subscriptionStatus';
+import { subscriptionPurchasePath } from '../../utils/subscriptionNavigation';
 
 interface SubscriptionCardActiveProps {
   subscription: Subscription;
@@ -148,7 +149,7 @@ export default function SubscriptionCardActive({
 
       {isExpiringSoon && (
         <Link
-          to={`/subscriptions/${subscription.id}/renew`}
+          to={subscriptionPurchasePath(subscription.id)}
           className="mt-3 flex min-h-12 w-full items-center justify-center rounded-xl bg-warning-500/15 px-4 text-sm font-semibold text-warning-400 transition-colors hover:bg-warning-500/20"
         >
           {t('subscription.extend')}

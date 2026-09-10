@@ -23,6 +23,7 @@ export interface DeviceReductionSheetProps {
   targetDeviceLimit: number;
   onTargetDeviceLimitChange: (n: number) => void;
   isDark: boolean;
+  hideTrigger?: boolean;
 }
 
 export function DeviceReductionSheet({
@@ -34,6 +35,7 @@ export function DeviceReductionSheet({
   targetDeviceLimit,
   onTargetDeviceLimitChange,
   isDark,
+  hideTrigger = false,
 }: DeviceReductionSheetProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -71,6 +73,8 @@ export function DeviceReductionSheet({
   });
 
   if (!open) {
+    if (hideTrigger) return null;
+
     return (
       <button
         onClick={onOpen}

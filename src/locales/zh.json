@@ -366,6 +366,7 @@
     "renew": "续费",
     "free": "免费",
     "extend": "延长订阅",
+    "manageTariff": "续订或更改套餐",
     "bestValue": "超值",
     "buyTraffic": "购买流量",
     "buyDevices": "增加设备",
@@ -388,6 +389,11 @@
     "timeLeft": "剩余时间",
     "getConfig": "连接设备",
     "autoRenewal": "自动续费",
+    "settingsTitle": "订阅设置",
+    "promocode": {
+      "hint": "激活优惠码，折扣或奖励将立即应用于本次购买"
+    },
+    "autopayUpdateError": "无法更新自动续费设置",
     "daysBeforeExpiry": "到期前天数",
     "daysBeforeExpiry_other": "到期前 {{count}} 天",
     "selectPeriod": "选择时长",
@@ -456,6 +462,7 @@
     },
     "additionalOptions": {
       "title": "附加选项",
+      "changeDeviceLimit": "更改设备数量限制",
       "buyDevices": "购买更多设备",
       "currentDeviceLimit_other": "当前限制：{{count}} 台设备",
       "maxDevices": "最多 {{count}} 台",

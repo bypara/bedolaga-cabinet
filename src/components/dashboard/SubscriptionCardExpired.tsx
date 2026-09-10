@@ -22,6 +22,7 @@ import {
 } from '@/components/icons';
 import { SubscriptionStatusBadge } from '../subscription/SubscriptionStatusBadge';
 import { getSubscriptionStatusPresentation } from '../../utils/subscriptionStatus';
+import { subscriptionPurchasePath } from '../../utils/subscriptionNavigation';
 
 interface SubscriptionCardExpiredProps {
   subscription: Subscription;
@@ -75,7 +76,8 @@ export default function SubscriptionCardExpired({
    * 30 дней — то есть решала за него и мимо скидок за длинные периоды (месяц за
    * 600 ₽ против полугода со скидкой). Хуже того, тариф вообще мог не
    * продаваться месяцем: тогда сервер отвечал «период недоступен», и кнопка
-   * выглядела сломанной. Теперь она открывает выбор периода текущего тарифа.
+   * выглядела сломанной. Теперь она открывает общий экран выбора тарифа и
+   * периода — тот же сценарий, что используется при покупке.
    */
   const isInstantRenew = isDisabledDaily || (isDaily && !!subscription.tariff_id);
 
@@ -100,9 +102,9 @@ export default function SubscriptionCardExpired({
         await subscriptionApi.purchaseTariff(subscription.tariff_id, 1, undefined, subscription.id);
       } else {
         // Сюда кнопка не ведёт: обычной подписке период выбирает клиент. Если
-        // условия показа когда-нибудь разъедутся, открываем выбор периода, а не
-        // списываем месяц молча.
-        navigate(`/subscriptions/${subscription.id}/renew`);
+        // условия показа когда-нибудь разъедутся, открываем общий сценарий
+        // покупки, а не списываем месяц молча.
+        navigate(subscriptionPurchasePath(subscription.id));
         return;
       }
       haptic.success();
@@ -265,7 +267,7 @@ export default function SubscriptionCardExpired({
               <ChevronRightIcon className="h-4 w-4" />
             </Link>
             <Link
-              to="/subscription/purchase"
+              to={subscriptionPurchasePath(subscription.id)}
               className="flex items-center justify-center rounded-[14px] border border-dark-700 bg-dark-800/60 px-5 py-3.5 text-[15px] font-semibold tracking-tight text-dark-300 transition-colors hover:bg-dark-800 hover:text-dark-100"
             >
               {t('dashboard.expired.tariffs')}
@@ -277,7 +279,7 @@ export default function SubscriptionCardExpired({
             {!subscription.is_trial &&
               (!isInstantRenew ? (
                 <Link
-                  to={`/subscriptions/${subscription.id}/renew`}
+                  to={subscriptionPurchasePath(subscription.id)}
                   onClick={() => haptic.buttonPressHeavy()}
                   className="flex flex-1 items-center justify-center gap-2 rounded-[14px] py-3.5 text-[15px] font-semibold tracking-tight text-white transition-all duration-300"
                   style={{
@@ -330,7 +332,7 @@ export default function SubscriptionCardExpired({
 
             {/* Tariffs (go to purchase page) — full-width for trials */}
             <Link
-              to="/subscription/purchase"
+              to={subscriptionPurchasePath(subscription.id)}
               className={`flex items-center justify-center rounded-[14px] px-5 py-3.5 text-[15px] font-semibold tracking-tight transition-colors duration-200 ${
                 subscription.is_trial ? 'flex-1 text-white' : 'text-dark-50/50'
               }`}

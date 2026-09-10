@@ -394,6 +394,7 @@
     "renew": "Renew",
     "free": "Free",
     "extend": "Extend Subscription",
+    "manageTariff": "Renew or change plan",
     "bestValue": "Best value",
     "buyTraffic": "Buy Traffic",
     "buyDevices": "Buy Devices",
@@ -426,6 +427,11 @@
     "timeLeft": "Time left",
     "getConfig": "Connect Devices",
     "autoRenewal": "Auto-renewal",
+    "settingsTitle": "Subscription settings",
+    "promocode": {
+      "hint": "Activate a code to apply its discount or bonuses to this purchase"
+    },
+    "autopayUpdateError": "Could not update auto-renewal settings",
     "daysBeforeExpiry": "days before expiry",
     "daysBeforeExpiry_one": "{{count}} day before expiry",
     "daysBeforeExpiry_other": "{{count}} days before expiry",
@@ -600,6 +606,7 @@
     "trafficResetAt": "Reset",
     "additionalOptions": {
       "title": "Additional options",
+      "changeDeviceLimit": "Change device limit",
       "buyDevices": "Buy more devices",
       "currentDeviceLimit_one": "Current limit: {{count}} device",
       "currentDeviceLimit_other": "Current limit: {{count}} devices",

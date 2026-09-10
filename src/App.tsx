@@ -42,6 +42,7 @@ import LegalOnboardingGate from './components/LegalOnboardingGate';
 import { useAnalyticsCounters } from './hooks/useAnalyticsCounters';
 import { useSiteVerification } from './hooks/useSiteVerification';
 import { useDoneKey } from './hooks/useDoneKey';
+import { subscriptionPurchasePath } from './utils/subscriptionNavigation';
 // Auth pages - load immediately (small)
 import Login from './pages/Login';
 import TelegramCallback from './pages/TelegramCallback';
@@ -75,7 +76,6 @@ const ConnectionQR = lazyWithRetry(() => import('./pages/ConnectionQR'));
 const QuickPurchase = lazyWithRetry(() => import('./pages/QuickPurchase'));
 const PurchaseSuccess = lazyWithRetry(() => import('./pages/PurchaseSuccess'));
 const GiftClaim = lazyWithRetry(() => import('./pages/GiftClaim'));
-const RenewSubscription = lazyWithRetry(() => import('./pages/RenewSubscription'));
 const AutoLogin = lazyWithRetry(() => import('./pages/AutoLogin'));
 const TopUpMethodSelect = lazyWithRetry(() => import('./pages/TopUpMethodSelect'));
 const TopUpAmount = lazyWithRetry(() => import('./pages/TopUpAmount'));
@@ -270,6 +270,13 @@ function LegacySubscriptionRedirect() {
   return <Navigate to={`/subscriptions/${subscriptionId}`} replace />;
 }
 
+/** Old renewal links now enter the shared tariff-first purchase flow. */
+function LegacyRenewalRedirect() {
+  const { subscriptionId } = useParams<{ subscriptionId: string }>();
+  const parsedId = subscriptionId ? Number(subscriptionId) : undefined;
+  return <Navigate to={subscriptionPurchasePath(parsedId)} replace />;
+}
+
 function App() {
   useAnalyticsCounters();
   // Pulls site-verification tokens (Antilopay apay-tag etc.) from the bot
@@ -381,9 +388,7 @@ function App() {
           path="/subscriptions/:subscriptionId/renew"
           element={
             <ProtectedRoute>
-              <LazyPage>
-                <RenewSubscription />
-              </LazyPage>
+              <LegacyRenewalRedirect />
             </ProtectedRoute>
           }
         />

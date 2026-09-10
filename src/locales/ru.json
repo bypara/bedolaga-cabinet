@@ -400,6 +400,7 @@
     "renew": "Продлить",
     "free": "Бесплатно",
     "extend": "Продлить подписку",
+    "manageTariff": "Продлить или сменить тариф",
     "bestValue": "Выгодно",
     "buyTraffic": "Докупить трафик",
     "buyDevices": "Докупить устройства",
@@ -435,6 +436,11 @@
     "timeLeft": "Осталось времени",
     "getConfig": "Подключить устройства",
     "autoRenewal": "Автопродление",
+    "settingsTitle": "Настройки подписки",
+    "promocode": {
+      "hint": "Активируйте код — скидка и бонусы сразу применятся к покупке"
+    },
+    "autopayUpdateError": "Не удалось изменить настройки автопродления",
     "daysBeforeExpiry": "дней до окончания",
     "daysBeforeExpiry_one": "{{count}} день до окончания",
     "daysBeforeExpiry_few": "{{count}} дня до окончания",
@@ -614,6 +620,7 @@
     "trafficResetAt": "Сброс",
     "additionalOptions": {
       "title": "Дополнительные опции",
+      "changeDeviceLimit": "Изменить лимит устройств",
       "buyDevices": "Докупить устройства",
       "currentDeviceLimit_one": "Текущий лимит: {{count}} устройство",
       "currentDeviceLimit_few": "Текущий лимит: {{count}} устройства",

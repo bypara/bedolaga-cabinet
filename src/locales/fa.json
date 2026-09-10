@@ -366,6 +366,7 @@
     "renew": "تمدید",
     "free": "رایگان",
     "extend": "تمدید اشتراک",
+    "manageTariff": "تمدید یا تغییر طرح",
     "bestValue": "به‌صرفه",
     "buyTraffic": "خرید ترافیک",
     "buyDevices": "خرید دستگاه",
@@ -388,6 +389,11 @@
     "timeLeft": "زمان باقی‌مانده",
     "getConfig": "اتصال دستگاه‌ها",
     "autoRenewal": "تمدید خودکار",
+    "settingsTitle": "تنظیمات اشتراک",
+    "promocode": {
+      "hint": "کد را فعال کنید تا تخفیف یا پاداش آن روی این خرید اعمال شود"
+    },
+    "autopayUpdateError": "تنظیمات تمدید خودکار به‌روزرسانی نشد",
     "daysBeforeExpiry": "روز قبل از انقضا",
     "daysBeforeExpiry_other": "{{count}} روز قبل از انقضا",
     "selectPeriod": "انتخاب دوره",
@@ -456,6 +462,7 @@
     },
     "additionalOptions": {
       "title": "گزینه‌های اضافی",
+      "changeDeviceLimit": "تغییر محدودیت دستگاه‌ها",
       "buyDevices": "خرید دستگاه بیشتر",
       "currentDeviceLimit_other": "محدودیت فعلی: {{count}} دستگاه",
       "maxDevices": "حداکثر {{count}}",

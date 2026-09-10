@@ -403,7 +403,7 @@ export default function Profile() {
           <button
             type="button"
             onClick={openNotificationSettings}
-            className="group flex min-h-28 flex-col justify-between rounded-[var(--bento-radius)] border border-dark-700/40 bg-dark-900/70 p-4 text-left transition-colors hover:border-accent-500/30 hover:bg-dark-800/60"
+            className="group col-span-2 flex min-h-28 flex-col justify-between rounded-[var(--bento-radius)] border border-dark-700/40 bg-dark-900/70 p-4 text-left transition-colors hover:border-accent-500/30 hover:bg-dark-800/60 sm:col-span-1"
           >
             <BellIcon className="h-6 w-6 text-accent-400" />
             <div className="flex w-full items-end justify-between gap-2">

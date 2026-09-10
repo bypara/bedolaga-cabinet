@@ -15,6 +15,7 @@ import { ClassicPurchaseWizard } from '../components/subscription/purchase/Class
 import { ExclamationIcon, SparklesIcon } from '@/components/icons';
 import { PageSkeleton, Skeleton } from '@/components/ui/skeleton';
 import { shouldShowLegacyTariffNotice } from '@/utils/subscriptionStatus';
+import { PromocodeActivationCard } from '@/components/subscription/PromocodeActivationCard';
 
 export default function SubscriptionPurchase() {
   const { t } = useTranslation();
@@ -149,6 +150,8 @@ export default function SubscriptionPurchase() {
                 : t('subscription.getSubscription')}
         </h1>
       </div>
+
+      <PromocodeActivationCard subscriptionId={subscriptionId} />
 
       {/* Tariffs Section */}
       {isTariffsMode && tariffs.length > 0 && (

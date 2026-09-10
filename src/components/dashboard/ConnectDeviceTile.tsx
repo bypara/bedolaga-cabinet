@@ -10,11 +10,13 @@ interface ConnectDeviceTileProps {
     subscription_url?: string | null;
   };
   connectedDevices: number;
+  showDeviceCount?: boolean;
 }
 
 export default function ConnectDeviceTile({
   subscription,
   connectedDevices,
+  showDeviceCount = true,
 }: ConnectDeviceTileProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -67,16 +69,18 @@ export default function ConnectDeviceTile({
 
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-semibold">{t('dashboard.connectDevice')}</span>
-        <span
-          className={`mt-0.5 block text-xs ${isFirstDevice ? 'text-white/70' : 'text-dark-400'}`}
-        >
-          {subscription.device_limit === 0
-            ? t('dashboard.devicesConnectedUnlimited', { used: connectedDevices })
-            : t('dashboard.devicesOfMax', {
-                used: connectedDevices,
-                max: subscription.device_limit,
-              })}
-        </span>
+        {showDeviceCount && (
+          <span
+            className={`mt-0.5 block text-xs ${isFirstDevice ? 'text-white/70' : 'text-dark-400'}`}
+          >
+            {subscription.device_limit === 0
+              ? t('dashboard.devicesConnectedUnlimited', { used: connectedDevices })
+              : t('dashboard.devicesOfMax', {
+                  used: connectedDevices,
+                  max: subscription.device_limit,
+                })}
+          </span>
+        )}
         {isAtDeviceLimit && (
           <span className="mt-1 block text-xs text-warning-400">
             {t('dashboard.deviceLimitReached')}

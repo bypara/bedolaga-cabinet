@@ -26,6 +26,7 @@ export interface DeviceTopupSheetProps {
   onDevicesToAddChange: (n: number) => void;
   purchaseOptions: PurchaseOptions | undefined;
   isDark: boolean;
+  hideTrigger?: boolean;
 }
 
 export function DeviceTopupSheet({
@@ -38,6 +39,7 @@ export function DeviceTopupSheet({
   onDevicesToAddChange,
   purchaseOptions,
   isDark,
+  hideTrigger = false,
 }: DeviceTopupSheetProps) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -67,6 +69,8 @@ export function DeviceTopupSheet({
   });
 
   if (!open) {
+    if (hideTrigger) return null;
+
     return (
       <button
         onClick={onOpen}

@@ -784,9 +784,18 @@
     "notFoundDesc": "It may have been deleted or not yet activated",
     "servers": "Servers",
     "statusActive": "Active",
+    "statusTrial": "Trial period",
+    "statusExpiring": "Expires soon",
+    "statusLimited": "Traffic exhausted",
+    "statusPaused": "Paused",
+    "statusDisabled": "Disabled",
     "statusExpired": "Expired",
-    "statusLimited": "Limited",
-    "statusTrial": "Trial"
+    "statusTrialExpired": "Trial expired",
+    "statusPending": "Activating",
+    "statusInactive": "Inactive",
+    "disabledDescription": "Access is disabled. Open the subscription to check its settings.",
+    "termLabel": "Subscription term",
+    "openDetails": "Details"
   },
   "balance": {
     "title": "Balance",

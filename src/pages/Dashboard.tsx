@@ -17,7 +17,6 @@ import SubscriptionCardExpired from '../components/dashboard/SubscriptionCardExp
 import TrialOfferCard from '../components/dashboard/TrialOfferCard';
 import StatsGrid from '../components/dashboard/StatsGrid';
 import { giftApi } from '../api/gift';
-import { promoApi } from '../api/promo';
 import PendingGiftCard from '../components/dashboard/PendingGiftCard';
 import SubscriptionListCard from '../components/subscription/SubscriptionListCard';
 import { DeviceLimitSheet } from '../components/subscription/DeviceLimitSheet';
@@ -26,14 +25,7 @@ import { API } from '../config/constants';
 import { useCurrency } from '../hooks/useCurrency';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { cn } from '@/lib/utils';
-import {
-  AgentIcon,
-  ChevronRightIcon,
-  GiftIcon,
-  ShieldIcon,
-  StarIcon,
-  UserIcon,
-} from '@/components/icons';
+import { AgentIcon, ChevronRightIcon, GiftIcon, ShieldIcon, UserIcon } from '@/components/icons';
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { safeLocal } from '../utils/safeStorage';
 import { getApiErrorMessage } from '../utils/api-error';
@@ -142,13 +134,6 @@ export default function Dashboard() {
     queryKey: ['pending-gifts'],
     queryFn: giftApi.getPendingGifts,
     staleTime: 30_000,
-    retry: false,
-  });
-
-  const { data: promoGroupData } = useQuery({
-    queryKey: ['promo-group-discounts'],
-    queryFn: promoApi.getGroupDiscounts,
-    staleTime: 60_000,
     retry: false,
   });
 
@@ -302,7 +287,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-end justify-between gap-4" data-onboarding="welcome">
+      <div data-onboarding="welcome">
         <div className="min-w-0">
           <p className="hidden text-sm text-dark-500 lg:block">{t('dashboard.title')}</p>
           <h1 className="mt-0.5 truncate text-xl font-bold text-dark-50 sm:text-2xl">
@@ -312,19 +297,6 @@ export default function Dashboard() {
             </span>
           </h1>
         </div>
-        {promoGroupData?.group_name && (
-          <span
-            className="mb-0.5 inline-flex max-w-[140px] flex-none items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-            style={{
-              background: 'rgba(var(--color-accent-400), 0.1)',
-              border: '1px solid rgba(var(--color-accent-400), 0.2)',
-              color: 'rgb(var(--color-accent-400))',
-            }}
-          >
-            <StarIcon filled className="h-2.5 w-2.5 shrink-0" />
-            <span className="truncate">{promoGroupData.group_name}</span>
-          </span>
-        )}
       </div>
 
       <EmailLinkReminder />

@@ -9,6 +9,8 @@ import { useTrafficZone } from '../../hooks/useTrafficZone';
 import { formatTraffic } from '../../utils/formatTraffic';
 import { getGlassColors } from '../../utils/glassTheme';
 import type { Subscription } from '../../types';
+import { SubscriptionStatusBadge } from '../subscription/SubscriptionStatusBadge';
+import { getSubscriptionStatusPresentation } from '../../utils/subscriptionStatus';
 
 interface SubscriptionCardActiveProps {
   subscription: Subscription;
@@ -44,30 +46,38 @@ export default function SubscriptionCardActive({
   });
   const daysLeft = subscription.days_left;
   const isExpiringSoon = daysLeft <= 14;
+  const statusPresentation = getSubscriptionStatusPresentation({
+    status: subscription.status,
+    isTrial: subscription.is_trial,
+    isDaily: subscription.is_daily,
+    isDailyPaused: subscription.is_daily_paused,
+    isExpired: subscription.is_expired,
+    daysLeft,
+  });
 
   return (
     <section
       className="relative overflow-hidden rounded-3xl p-5 sm:p-6 lg:backdrop-blur-xl"
       style={{
         background: g.cardBg,
-        border: `1px solid ${g.cardBorder}`,
+        border: `1px solid ${
+          statusPresentation.kind === 'active' ? g.cardBorder : statusPresentation.borderColor
+        }`,
         boxShadow: g.shadow,
       }}
       aria-labelledby="current-subscription-title"
     >
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-success-500/10 px-2.5 py-1 text-[11px] font-semibold text-success-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-success-400" aria-hidden="true" />
-              {t('subscription.active')}
-            </span>
-            {subscription.is_trial && (
-              <span className="rounded-full bg-accent-500/10 px-2.5 py-1 text-[11px] font-semibold text-accent-400">
-                {t('subscription.trialStatus')}
-              </span>
-            )}
-          </div>
+          <SubscriptionStatusBadge
+            status={subscription.status}
+            isTrial={subscription.is_trial}
+            isDaily={subscription.is_daily}
+            isDailyPaused={subscription.is_daily_paused}
+            isExpired={subscription.is_expired}
+            daysLeft={daysLeft}
+            className="mb-2"
+          />
           <h2
             id="current-subscription-title"
             className="truncate text-xl font-bold tracking-tight text-dark-50"
@@ -82,9 +92,10 @@ export default function SubscriptionCardActive({
 
         <Link
           to={`/subscriptions/${subscription.id}`}
-          className="flex min-h-10 flex-none items-center gap-1 rounded-xl border border-dark-700/80 px-3 text-xs font-medium text-dark-300 transition-colors hover:border-dark-600 hover:bg-dark-800 hover:text-dark-100"
+          className="flex h-10 flex-none items-center gap-1 rounded-xl border border-dark-700/80 px-3 text-xs font-medium text-dark-300 transition-colors hover:border-dark-600 hover:bg-dark-800 hover:text-dark-100"
+          aria-label={t('dashboard.viewSubscription')}
         >
-          {t('dashboard.viewSubscription')}
+          <span className="hidden sm:inline">{t('dashboard.viewSubscription')}</span>
           <ChevronRightIcon className="h-3.5 w-3.5" />
         </Link>
       </div>

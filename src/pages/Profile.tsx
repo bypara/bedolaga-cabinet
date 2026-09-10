@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { usePlatform } from '@/platform';
-import { copyToClipboard } from '@/utils/clipboard';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/auth';
@@ -30,17 +29,16 @@ import { Card } from '@/components/data-display/Card';
 import { Button } from '@/components/primitives/Button';
 import { Switch } from '@/components/primitives/Switch';
 import { staggerContainer, staggerItem } from '@/components/motion/transitions';
+import { WebBackButton } from '../components/WebBackButton';
 import {
   ArrowRightIcon,
   BellIcon,
   CheckIcon,
   ChevronDownIcon,
-  CopyIcon,
   InfoIcon,
   LogoutIcon,
   MoonIcon,
   PencilIcon,
-  ShareIcon,
   SunIcon,
   UserIcon,
   UsersIcon,
@@ -62,8 +60,6 @@ export default function Profile() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [accountDetailsOpen, setAccountDetailsOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Inline email change flow
@@ -92,12 +88,6 @@ export default function Profile() {
     queryFn: balanceApi.getBalance,
   });
 
-  const { data: branding } = useQuery({
-    queryKey: ['branding'],
-    queryFn: brandingApi.getBranding,
-    staleTime: 60000,
-  });
-
   // Check if email auth is enabled
   const { data: emailAuthConfig } = useQuery<EmailAuthEnabled>({
     queryKey: ['email-auth-enabled'],
@@ -113,41 +103,6 @@ export default function Profile() {
     staleTime: 1000 * 60 * 5,
   });
   const canToggleTheme = enabledThemes?.dark && enabledThemes?.light;
-
-  // Build referral link for cabinet
-  const referralLink = referralInfo?.referral_code
-    ? `${window.location.origin}/login?ref=${referralInfo.referral_code}`
-    : '';
-
-  const copyReferralLink = () => {
-    if (referralLink) {
-      void copyToClipboard(referralLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const shareReferralLink = () => {
-    if (!referralLink) return;
-    const shareText = t('referral.shareMessage', {
-      percent: referralInfo?.commission_percent || 0,
-      botName: branding?.name || import.meta.env.VITE_APP_NAME || 'Cabinet',
-    });
-
-    if (navigator.share) {
-      navigator
-        .share({
-          title: t('referral.title'),
-          text: shareText,
-          url: referralLink,
-        })
-        .catch(() => {});
-      return;
-    }
-
-    const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
-    openTelegramLink(telegramUrl);
-  };
 
   const resendVerificationMutation = useMutation({
     mutationFn: authApi.resendVerification,
@@ -222,7 +177,7 @@ export default function Profile() {
   }, [startResendCooldown]);
 
   // Auto-focus inputs on step change (skip on Telegram — keyboard hides bottom nav)
-  const { platform: profilePlatform, openTelegramLink } = usePlatform();
+  const { platform: profilePlatform } = usePlatform();
   useEffect(() => {
     if (profilePlatform === 'telegram') return;
     const timer = setTimeout(() => {
@@ -313,7 +268,14 @@ export default function Profile() {
       animate="animate"
     >
       <motion.div variants={staggerItem}>
-        <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('profile.title')}</h1>
+        <div className="flex items-center gap-3">
+          <WebBackButton
+            to="/"
+            showInTelegram
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-dark-700 bg-dark-800 transition-colors hover:border-dark-600 lg:hidden"
+          />
+          <h1 className="text-2xl font-bold text-dark-50 sm:text-3xl">{t('profile.title')}</h1>
+        </div>
       </motion.div>
 
       {/* Profile summary */}
@@ -358,6 +320,20 @@ export default function Profile() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2 border-t border-dark-800/60 pt-4">
+            <div className="min-w-0 rounded-xl bg-dark-950/35 px-3 py-2.5">
+              <span className="block text-xs text-dark-500">{t('profile.telegramId')}</span>
+              <span className="mt-0.5 block truncate text-sm font-medium text-dark-200">
+                {user?.telegram_id ?? '—'}
+              </span>
+            </div>
+            <div className="min-w-0 rounded-xl bg-dark-950/35 px-3 py-2.5">
+              <span className="block text-xs text-dark-500">{t('profile.registeredAt')}</span>
+              <span className="mt-0.5 block truncate text-sm font-medium text-dark-200">
+                {user?.created_at ? new Date(user.created_at).toLocaleDateString(uiLocale()) : '—'}
+              </span>
             </div>
           </div>
         </Card>
@@ -437,108 +413,6 @@ export default function Profile() {
           </button>
         </div>
       </motion.div>
-
-      {/* Less frequently needed account details */}
-      <motion.div variants={staggerItem}>
-        <Card size="md">
-          <button
-            type="button"
-            onClick={() => setAccountDetailsOpen((open) => !open)}
-            className="flex w-full items-center justify-between gap-3 text-left"
-            aria-expanded={accountDetailsOpen}
-          >
-            <span className="font-semibold text-dark-100">{t('profile.accountInfo')}</span>
-            <ChevronDownIcon
-              className={`h-5 w-5 shrink-0 text-dark-400 transition-transform ${accountDetailsOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-          <AnimatePresence initial={false}>
-            {accountDetailsOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-4 space-y-1 border-t border-dark-800/50 pt-3">
-                  <div className="flex items-center justify-between gap-4 py-2">
-                    <span className="text-sm text-dark-400">{t('profile.telegramId')}</span>
-                    <span className="truncate text-sm font-medium text-dark-100">
-                      {user?.telegram_id ?? '—'}
-                    </span>
-                  </div>
-                  {user?.username && (
-                    <div className="flex items-center justify-between gap-4 py-2">
-                      <span className="text-sm text-dark-400">{t('profile.username')}</span>
-                      <span className="truncate text-sm font-medium text-dark-100">
-                        @{user.username}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between gap-4 py-2">
-                    <span className="text-sm text-dark-400">{t('profile.name')}</span>
-                    <span className="truncate text-sm font-medium text-dark-100">
-                      {displayName(user)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4 py-2">
-                    <span className="text-sm text-dark-400">{t('profile.registeredAt')}</span>
-                    <span className="text-sm font-medium text-dark-100">
-                      {user?.created_at
-                        ? new Date(user.created_at).toLocaleDateString(uiLocale())
-                        : '—'}
-                    </span>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </Card>
-      </motion.div>
-
-      {/* Referral Link Widget — self-animated: mounts after the referral queries
-          resolve, when the parent stagger orchestration has already finished and
-          would leave it stuck at opacity 0 */}
-      {referralTerms?.is_enabled && referralLink && (
-        <motion.div variants={staggerItem} initial="initial" animate="animate">
-          <Card>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-dark-100">{t('referral.yourLink')}</h2>
-              <Link
-                to="/referral"
-                className="flex items-center gap-1 text-accent-400 transition-colors hover:text-accent-300"
-              >
-                <span className="text-sm">{t('referral.title')}</span>
-                <ArrowRightIcon className="h-4 w-4" />
-              </Link>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <div className="flex-1">
-                <input type="text" readOnly value={referralLink} className="input w-full text-sm" />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={copyReferralLink}
-                  variant={copied ? 'primary' : 'primary'}
-                  className={copied ? 'bg-success-500 hover:bg-success-500' : ''}
-                >
-                  {copied ? <CheckIcon /> : <CopyIcon />}
-                  <span className="ml-2">
-                    {copied ? t('referral.copied') : t('referral.copyLink')}
-                  </span>
-                </Button>
-                <Button onClick={shareReferralLink} variant="secondary">
-                  <ShareIcon className="h-4 w-4" />
-                  <span className="ml-2 hidden sm:inline">{t('referral.shareButton')}</span>
-                </Button>
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-dark-500">
-              {t('referral.shareHint', { percent: referralInfo?.commission_percent || 0 })}
-            </p>
-          </Card>
-        </motion.div>
-      )}
 
       {/* Email Section - only show when email auth is enabled */}
       {isEmailAuthEnabled && (

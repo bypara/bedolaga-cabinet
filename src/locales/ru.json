@@ -804,9 +804,18 @@
     "notFoundDesc": "Возможно, она была удалена или ещё не активирована",
     "servers": "Серверы",
     "statusActive": "Активна",
+    "statusTrial": "Пробный период",
+    "statusExpiring": "Скоро закончится",
+    "statusLimited": "Трафик закончился",
+    "statusPaused": "Приостановлена",
+    "statusDisabled": "Отключена",
     "statusExpired": "Истекла",
-    "statusLimited": "Ограничена",
-    "statusTrial": "Триал"
+    "statusTrialExpired": "Пробный период истёк",
+    "statusPending": "Активируется",
+    "statusInactive": "Неактивна",
+    "disabledDescription": "Доступ отключён. Откройте подписку, чтобы проверить настройки.",
+    "termLabel": "Срок подписки",
+    "openDetails": "Подробнее"
   },
   "balance": {
     "title": "Баланс",

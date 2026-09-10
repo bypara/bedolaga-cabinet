@@ -6,6 +6,8 @@ import { CalendarIcon, CheckIcon, ChevronRightIcon, DevicesIcon } from '@/compon
 import type { SubscriptionListItem } from '../../types';
 import { connectFooterState } from './connectFooterState';
 import { SubscriptionConnectFooter } from './SubscriptionConnectFooter';
+import { SubscriptionStatusBadge } from './SubscriptionStatusBadge';
+import { getSubscriptionStatusPresentation } from '../../utils/subscriptionStatus';
 
 function formatDate(iso: string | null, locale?: string): string {
   if (!iso) return '—';
@@ -18,57 +20,6 @@ function formatDate(iso: string | null, locale?: string): string {
   } catch {
     return '—';
   }
-}
-
-function StatusBadge({
-  status,
-  isTrial,
-  t,
-}: {
-  status: string;
-  isTrial: boolean;
-  t: (key: string, fallback: string) => string;
-}) {
-  const isActive = status === 'active' || status === 'trial';
-  const isLimited = status === 'limited';
-  const isExpired = status === 'expired' || status === 'disabled';
-
-  if (isTrial) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-warning-400/25 bg-warning-400/10 px-2 py-0.5 text-[10px] font-semibold text-warning-400">
-        <svg className="h-2.5 w-2.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
-        </svg>
-        {t('subscription.statusTrial', 'Тестовая')}
-      </span>
-    );
-  }
-
-  // Подложка и рамка берут шейд 500, а текст — 400. В светлой теме 300/400
-  // ремапятся в тёмный шейд (иначе статусный текст на белом не читается), и
-  // подложка из того же 400 темнела вместе с текстом: контраст надписи падал до
-  // 4.2. Шейд 500 в ремап не входит, поэтому плашка остаётся светлой подкраской.
-  const color = isActive
-    ? 'bg-success-500/15 text-success-400 border-success-500/20'
-    : isLimited
-      ? 'bg-warning-500/15 text-warning-400 border-warning-500/20'
-      : 'bg-error-500/15 text-error-400 border-error-500/20';
-
-  const label = isActive
-    ? t('subscription.statusActive', 'Активна')
-    : isLimited
-      ? t('subscription.statusLimited', 'Ограничена')
-      : isExpired
-        ? t('subscription.statusExpired', 'Истекла')
-        : status;
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${color}`}
-    >
-      {label}
-    </span>
-  );
 }
 
 export default function SubscriptionListCard({
@@ -104,7 +55,13 @@ export default function SubscriptionListCard({
     subscription.status === 'active' ||
     subscription.status === 'trial' ||
     subscription.status === 'limited';
-  const isExpired = subscription.status === 'expired' || subscription.status === 'disabled';
+  const statusPresentation = getSubscriptionStatusPresentation({
+    status: subscription.status,
+    isTrial,
+    isDaily: subscription.is_daily,
+    isDailyPaused: subscription.is_daily_paused,
+    endDate: subscription.end_date,
+  });
   const trafficLimit = subscription.traffic_limit_gb;
   const trafficUsed = subscription.traffic_used_gb;
   const isUnlimited = trafficLimit === 0;
@@ -120,25 +77,8 @@ export default function SubscriptionListCard({
         ? 'bg-warning-400'
         : 'bg-success-400';
 
-  const isLimitedStatus = subscription.status === 'limited';
-
   const borderColor =
-    isTrial || isLimitedStatus
-      ? 'rgba(251,191,36,0.2)'
-      : isExpired
-        ? 'rgba(255,59,92,0.15)'
-        : g.cardBorder;
-
-  const bgColor =
-    isTrial || isLimitedStatus
-      ? isDark
-        ? 'rgba(251,191,36,0.04)'
-        : 'rgba(251,191,36,0.03)'
-      : isExpired
-        ? isDark
-          ? 'rgba(255,59,92,0.04)'
-          : 'rgba(255,59,92,0.03)'
-        : g.cardBg;
+    statusPresentation.kind === 'active' ? g.cardBorder : statusPresentation.borderColor;
 
   const footer = connect
     ? connectFooterState({
@@ -154,16 +94,23 @@ export default function SubscriptionListCard({
   return (
     <div
       className="overflow-hidden rounded-2xl border transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]"
-      style={{ background: bgColor, borderColor }}
+      style={{ background: g.cardBg, borderColor }}
     >
       <button onClick={handleClick} className="w-full p-4 text-left">
         {/* Header: tariff name + status badge + chevron */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-col items-start gap-1.5">
             <span className="truncate text-base font-semibold" style={{ color: g.text }}>
               {subscription.tariff_name || t('subscription.defaultName', 'Подписка')}
             </span>
-            <StatusBadge status={subscription.status} isTrial={isTrial} t={t} />
+            <SubscriptionStatusBadge
+              status={subscription.status}
+              isTrial={isTrial}
+              isDaily={subscription.is_daily}
+              isDailyPaused={subscription.is_daily_paused}
+              endDate={subscription.end_date}
+              className="shrink-0"
+            />
           </div>
           <ChevronRightIcon className="h-4 w-4 shrink-0 opacity-30" />
         </div>

@@ -14,13 +14,13 @@ import { TariffPickerGrid } from '../components/subscription/purchase/TariffPick
 import { ClassicPurchaseWizard } from '../components/subscription/purchase/ClassicPurchaseWizard';
 import { ExclamationIcon, SparklesIcon } from '@/components/icons';
 import { PageSkeleton, Skeleton } from '@/components/ui/skeleton';
+import { shouldShowLegacyTariffNotice } from '@/utils/subscriptionStatus';
 
 export default function SubscriptionPurchase() {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
-  const subscriptionId = searchParams.get('subscriptionId')
-    ? parseInt(searchParams.get('subscriptionId')!, 10)
-    : undefined;
+  const subscriptionIdParam = searchParams.get('subscriptionId');
+  const subscriptionId = subscriptionIdParam ? parseInt(subscriptionIdParam, 10) : undefined;
   const { isDark } = useTheme();
   const g = getGlassColors(isDark);
 
@@ -240,19 +240,24 @@ export default function SubscriptionPurchase() {
             )}
 
           {/* Legacy subscription notice */}
-          {subscription && !subscription.is_trial && !subscription.tariff_id && (
-            <div className="mb-6 rounded-xl border border-accent-500/30 bg-accent-500/10 p-4">
-              <div className="mb-2 font-medium text-accent-400">
-                {t('subscription.legacy.selectTariffTitle')}
+          {subscription &&
+            shouldShowLegacyTariffNotice({
+              status: subscription.status,
+              isTrial: subscription.is_trial,
+              tariffId: subscription.tariff_id,
+            }) && (
+              <div className="mb-6 rounded-xl border border-accent-500/30 bg-accent-500/10 p-4">
+                <div className="mb-2 font-medium text-accent-400">
+                  {t('subscription.legacy.selectTariffTitle')}
+                </div>
+                <div className="text-sm text-dark-300">
+                  {t('subscription.legacy.selectTariffDescription')}
+                </div>
+                <div className="mt-2 text-xs text-dark-500">
+                  {t('subscription.legacy.currentSubContinues')}
+                </div>
               </div>
-              <div className="text-sm text-dark-300">
-                {t('subscription.legacy.selectTariffDescription')}
-              </div>
-              <div className="mt-2 text-xs text-dark-500">
-                {t('subscription.legacy.currentSubContinues')}
-              </div>
-            </div>
-          )}
+            )}
 
           {/* Switch Tariff Preview Modal */}
           <SwitchTariffSheet

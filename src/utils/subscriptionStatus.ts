@@ -31,6 +31,12 @@ export interface SubscriptionStatusPresentation {
   textColor: string;
 }
 
+export interface LegacyTariffNoticeInput {
+  status?: string | null;
+  isTrial?: boolean;
+  tariffId?: number | null;
+}
+
 const presentations: Record<
   SubscriptionStatusKind,
   Omit<SubscriptionStatusPresentation, 'kind'>
@@ -165,4 +171,14 @@ export function getSubscriptionStatusPresentation(
 ): SubscriptionStatusPresentation {
   const kind = resolveSubscriptionStatus(input);
   return { kind, ...presentations[kind] };
+}
+
+/**
+ * The legacy-tariff explanation is only meaningful for a subscription that is
+ * currently providing access.  A disabled/expired subscription with no tariff
+ * may indeed be an old row, but telling the user that it "continues to work"
+ * is false and obscures the actual state shown on the subscription card.
+ */
+export function shouldShowLegacyTariffNotice(input: LegacyTariffNoticeInput): boolean {
+  return input.status?.toLowerCase() === 'active' && input.isTrial !== true && !input.tariffId;
 }

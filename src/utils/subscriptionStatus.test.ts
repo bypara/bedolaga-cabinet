@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveSubscriptionStatus } from './subscriptionStatus';
+import { resolveSubscriptionStatus, shouldShowLegacyTariffNotice } from './subscriptionStatus';
 
 describe('resolveSubscriptionStatus', () => {
   it.each([
@@ -16,5 +16,17 @@ describe('resolveSubscriptionStatus', () => {
     [{ status: 'something-new' }, 'inactive'],
   ] as const)('maps %o to %s', (input, expected) => {
     expect(resolveSubscriptionStatus(input)).toBe(expected);
+  });
+});
+
+describe('shouldShowLegacyTariffNotice', () => {
+  it.each([
+    [{ status: 'active', isTrial: false, tariffId: null }, true],
+    [{ status: 'disabled', isTrial: false, tariffId: null }, false],
+    [{ status: 'expired', isTrial: false, tariffId: null }, false],
+    [{ status: 'active', isTrial: true, tariffId: null }, false],
+    [{ status: 'active', isTrial: false, tariffId: 7 }, false],
+  ] as const)('maps %o to %s', (input, expected) => {
+    expect(shouldShowLegacyTariffNotice(input)).toBe(expected);
   });
 });

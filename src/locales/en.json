@@ -286,6 +286,16 @@
     "title": "Dashboard",
     "welcome": "Welcome, {{name}}!",
     "welcomeNoName": "Welcome!",
+    "emptyState": {
+      "title": "Choose the right plan",
+      "description": "Get a subscription to connect your devices and access the service.",
+      "action": "View plans"
+    },
+    "supportCard": {
+      "title": "Need help?",
+      "description": "We can help with connection, payment, and service setup.",
+      "action": "Open support"
+    },
     "yourSubscription": "Your Subscription",
     "quickActions": "Quick Actions",
     "viewSubscription": "Manage Subscription",

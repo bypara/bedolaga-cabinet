@@ -6,7 +6,6 @@ import { useAuthStore } from '../store/auth';
 import { displayName } from '../utils/displayName';
 import { useBlockingStore } from '../store/blocking';
 import { subscriptionApi } from '../api/subscription';
-import { referralApi } from '../api/referral';
 import { balanceApi } from '../api/balance';
 import { wheelApi } from '../api/wheel';
 import Onboarding, { useOnboarding } from '../components/Onboarding';
@@ -15,7 +14,6 @@ import NewsSection from '../components/news/NewsSection';
 import SubscriptionCardActive from '../components/dashboard/SubscriptionCardActive';
 import SubscriptionCardExpired from '../components/dashboard/SubscriptionCardExpired';
 import TrialOfferCard from '../components/dashboard/TrialOfferCard';
-import StatsGrid from '../components/dashboard/StatsGrid';
 import { giftApi } from '../api/gift';
 import PendingGiftCard from '../components/dashboard/PendingGiftCard';
 import SubscriptionListCard from '../components/subscription/SubscriptionListCard';
@@ -25,7 +23,14 @@ import { API } from '../config/constants';
 import { useCurrency } from '../hooks/useCurrency';
 import { useFeatureFlags } from '../hooks/useFeatureFlags';
 import { cn } from '@/lib/utils';
-import { AgentIcon, ChevronRightIcon, GiftIcon, ShieldIcon, UserIcon } from '@/components/icons';
+import {
+  AgentIcon,
+  ChevronRightIcon,
+  GiftIcon,
+  ShieldIcon,
+  SubscriptionIcon,
+  UserIcon,
+} from '@/components/icons';
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { safeLocal } from '../utils/safeStorage';
 import { getApiErrorMessage } from '../utils/api-error';
@@ -41,6 +46,9 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const { isCompleted: isOnboardingCompleted, complete: completeOnboarding } = useOnboarding();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isDesktopLayout, setIsDesktopLayout] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= 1024,
+  );
   const blockingType = useBlockingStore((state) => state.blockingType);
   const [trialError, setTrialError] = useState<string | null>(null);
 
@@ -117,11 +125,6 @@ export default function Dashboard() {
   const deviceLimitSub = visibleSubscriptions.find((s) => s.id === deviceLimitSubId) ?? null;
   const deviceLimitDevices =
     deviceQueries[visibleSubscriptions.findIndex((s) => s.id === deviceLimitSubId)]?.data;
-
-  const { data: referralInfo, isLoading: refLoading } = useQuery({
-    queryKey: ['referral-info'],
-    queryFn: referralApi.getReferralInfo,
-  });
 
   const { data: wheelConfig } = useQuery({
     queryKey: ['wheel-config'],
@@ -236,13 +239,19 @@ export default function Dashboard() {
     (s) => !s.is_trial && (s.status === 'active' || s.status === 'limited'),
   );
 
+  useEffect(() => {
+    const updateLayout = () => setIsDesktopLayout(window.innerWidth >= 1024);
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, []);
+
   // Show onboarding for new users after data loads
   useEffect(() => {
-    if (!isOnboardingCompleted && !subLoading && !refLoading && !blockingType) {
+    if (!isOnboardingCompleted && !subLoading && !blockingType) {
       const timer = setTimeout(() => setShowOnboarding(true), 500);
       return () => clearTimeout(timer);
     }
-  }, [isOnboardingCompleted, subLoading, refLoading, blockingType]);
+  }, [isOnboardingCompleted, subLoading, blockingType]);
 
   const onboardingSteps = useMemo(() => {
     type Placement = 'top' | 'bottom' | 'left' | 'right';
@@ -258,16 +267,10 @@ export default function Dashboard() {
         description: t('onboarding.steps.welcome.description'),
         placement: 'bottom',
       },
-      {
-        target: 'balance',
-        title: t('onboarding.steps.balance.title'),
-        description: t('onboarding.steps.balance.description'),
-        placement: 'bottom',
-      },
     ];
 
     if (subscription?.subscription_url) {
-      steps.splice(1, 0, {
+      steps.push({
         target: 'connect-devices',
         title: t('onboarding.steps.connectDevices.title'),
         description: t('onboarding.steps.connectDevices.description'),
@@ -275,8 +278,18 @@ export default function Dashboard() {
       });
     }
 
+    // Balance remains part of the mobile tour, where its profile card is still visible.
+    if (!isDesktopLayout) {
+      steps.push({
+        target: 'balance',
+        title: t('onboarding.steps.balance.title'),
+        description: t('onboarding.steps.balance.description'),
+        placement: 'bottom',
+      });
+    }
+
     return steps;
-  }, [t, subscription]);
+  }, [t, subscription, isDesktopLayout]);
 
   const handleOnboardingComplete = () => {
     completeOnboarding();
@@ -360,133 +373,176 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Pending Gift Activations */}
-      {pendingGifts && pendingGifts.length > 0 && <PendingGiftCard gifts={pendingGifts} />}
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start lg:gap-5">
+        <div className="space-y-5">
+          {/* Pending Gift Activations */}
+          {pendingGifts && pendingGifts.length > 0 && <PendingGiftCard gifts={pendingGifts} />}
 
-      {/* Multi-tariff: show subscription cards (max 3) — только когда подписки
+          {/* Multi-tariff: show subscription cards (max 3) — только когда подписки
           реально есть. Пустой случай (нет подписок) ведёт блок ниже (триал/покупка),
           иначе кнопка покупки дублировалась. */}
-      {isMultiTariff && multiSubData?.subscriptions && multiSubData.subscriptions.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-sm font-medium text-dark-400">
-              {t('dashboard.subscriptions', 'Подписки')}
-            </span>
-            <Link to="/subscriptions" className="text-xs text-accent-400 hover:underline">
-              {t('dashboard.manageAll', 'Управление')} →
-            </Link>
-          </div>
-          {visibleSubscriptions.map((sub, index) => (
-            <SubscriptionListCard
-              key={sub.id}
-              subscription={sub}
-              onClick={() => navigate(`/subscriptions/${sub.id}`)}
-              connect={{
-                connectedDevices: deviceQueries[index]?.data?.total,
-                onConnect: () => navigate(`/connection?sub=${sub.id}`),
-                onManage: () => setDeviceLimitSubId(sub.id),
-              }}
-            />
-          ))}
-          {multiSubData.subscriptions.length > 3 && (
-            <Link
-              to="/subscriptions"
-              className="flex w-full items-center justify-center rounded-2xl border border-dashed border-white/15 p-3 text-xs opacity-50 transition-opacity hover:opacity-80"
-            >
-              {t('dashboard.showAll', 'Показать все')} ({multiSubData.subscriptions.length})
-            </Link>
-          )}
-          {hasActivePaid ? (
-            <Link
-              to="/subscription/purchase"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500/15 p-3.5 text-sm font-medium text-accent-400 transition-all hover:bg-accent-500/25"
-            >
-              <span className="text-base">+</span>{' '}
-              {t('subscriptions.buyAnother', 'Купить ещё тариф')}
-            </Link>
-          ) : (
-            <Link
-              to="/subscription/purchase"
-              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 p-3.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-600"
-            >
-              <span className="text-base">+</span>{' '}
-              {t('subscriptions.browsePlans', 'Посмотреть тарифы и купить подписку')}
-            </Link>
-          )}
-        </div>
-      )}
+          {isMultiTariff &&
+            multiSubData?.subscriptions &&
+            multiSubData.subscriptions.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-sm font-medium text-dark-400">
+                    {t('dashboard.subscriptions', 'Подписки')}
+                  </span>
+                  <Link to="/subscriptions" className="text-xs text-accent-400 hover:underline">
+                    {t('dashboard.manageAll', 'Управление')} →
+                  </Link>
+                </div>
+                {visibleSubscriptions.map((sub, index) => (
+                  <SubscriptionListCard
+                    key={sub.id}
+                    subscription={sub}
+                    onClick={() => navigate(`/subscriptions/${sub.id}`)}
+                    connect={{
+                      connectedDevices: deviceQueries[index]?.data?.total,
+                      onConnect: () => navigate(`/connection?sub=${sub.id}`),
+                      onManage: () => setDeviceLimitSubId(sub.id),
+                    }}
+                  />
+                ))}
+                {multiSubData.subscriptions.length > 3 && (
+                  <Link
+                    to="/subscriptions"
+                    className="flex w-full items-center justify-center rounded-2xl border border-dashed border-white/15 p-3 text-xs opacity-50 transition-opacity hover:opacity-80"
+                  >
+                    {t('dashboard.showAll', 'Показать все')} ({multiSubData.subscriptions.length})
+                  </Link>
+                )}
+                {hasActivePaid ? (
+                  <Link
+                    to="/subscription/purchase"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500/15 p-3.5 text-sm font-medium text-accent-400 transition-all hover:bg-accent-500/25"
+                  >
+                    <span className="text-base">+</span>{' '}
+                    {t('subscriptions.buyAnother', 'Купить ещё тариф')}
+                  </Link>
+                ) : (
+                  <Link
+                    to="/subscription/purchase"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 p-3.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-600"
+                  >
+                    <span className="text-base">+</span>{' '}
+                    {t('subscriptions.browsePlans', 'Посмотреть тарифы и купить подписку')}
+                  </Link>
+                )}
+              </div>
+            )}
 
-      {/* Subscription Status Card — hidden in multi-tariff (managed via /subscriptions) */}
-      {!isMultiTariff &&
-        (subLoading ? (
-          <SkeletonGroup className="bento-card">
-            <div className="mb-4 flex items-center justify-between">
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-6 w-16 rounded-full" />
-            </div>
-            <Skeleton className="mb-3 h-10 w-32" />
-            <Skeleton className="mb-3 h-4 w-40" />
-            <Skeleton className="h-3 w-full rounded-full" />
-            <div className="mt-5">
-              <Skeleton className="h-12 w-full rounded-xl" />
-            </div>
-          </SkeletonGroup>
-        ) : subscription?.is_expired ||
-          subscription?.status === 'disabled' ||
-          subscription?.is_limited ? (
-          <SubscriptionCardExpired
-            subscription={subscription}
-            balanceKopeks={balanceData?.balance_kopeks ?? 0}
-            balanceRubles={balanceData?.balance_rubles ?? 0}
-          />
-        ) : subscription ? (
-          <SubscriptionCardActive
-            subscription={subscription}
-            trafficData={trafficData}
-            refreshTrafficMutation={refreshTrafficMutation}
-            trafficRefreshCooldown={trafficRefreshCooldown}
-            connectedDevices={devicesData?.total ?? 0}
-          />
-        ) : null)}
+          {/* Subscription Status Card — hidden in multi-tariff (managed via /subscriptions) */}
+          {!isMultiTariff &&
+            (subLoading ? (
+              <SkeletonGroup className="bento-card">
+                <div className="mb-4 flex items-center justify-between">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                </div>
+                <Skeleton className="mb-3 h-10 w-32" />
+                <Skeleton className="mb-3 h-4 w-40" />
+                <Skeleton className="h-3 w-full rounded-full" />
+                <div className="mt-5">
+                  <Skeleton className="h-12 w-full rounded-xl" />
+                </div>
+              </SkeletonGroup>
+            ) : subscription?.is_expired ||
+              subscription?.status === 'disabled' ||
+              subscription?.is_limited ? (
+              <SubscriptionCardExpired
+                subscription={subscription}
+                balanceKopeks={balanceData?.balance_kopeks ?? 0}
+                balanceRubles={balanceData?.balance_rubles ?? 0}
+              />
+            ) : subscription ? (
+              <SubscriptionCardActive
+                subscription={subscription}
+                trafficData={trafficData}
+                refreshTrafficMutation={refreshTrafficMutation}
+                trafficRefreshCooldown={trafficRefreshCooldown}
+                connectedDevices={devicesData?.total ?? 0}
+              />
+            ) : null)}
 
-      {/* Нет подписок: показываем триал (если доступен) и ВСЕГДА одну явную
+          {/* Нет подписок: показываем триал (если доступен) и ВСЕГДА одну явную
           кнопку покупки. Триал не обязателен, чтобы попасть в витрину — раньше
           при доступном триале это был единственный экран без кнопки покупки
           (Telegram-баг #605056/#605063). Единственная кнопка тут (вместо дубля
           с мульти-тариф блоком). */}
-      {hasNoSubscription && !trialLoading && (
-        <div className="space-y-3">
-          {trialInfo?.is_available && (
-            <TrialOfferCard
-              trialInfo={trialInfo}
-              balanceKopeks={balanceData?.balance_kopeks || 0}
-              balanceRubles={balanceData?.balance_rubles || 0}
-              activateTrialMutation={activateTrialMutation}
-              trialError={trialError}
-            />
+          {hasNoSubscription && !trialLoading && (
+            <div className="space-y-3">
+              {trialInfo?.is_available ? (
+                <TrialOfferCard
+                  trialInfo={trialInfo}
+                  balanceKopeks={balanceData?.balance_kopeks || 0}
+                  balanceRubles={balanceData?.balance_rubles || 0}
+                  activateTrialMutation={activateTrialMutation}
+                  trialError={trialError}
+                />
+              ) : (
+                <div className="hidden min-h-[280px] flex-col justify-between rounded-3xl border border-dark-700/60 bg-dark-900/70 p-7 lg:flex">
+                  <div>
+                    <span className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-500/10 text-accent-400">
+                      <SubscriptionIcon className="h-6 w-6" />
+                    </span>
+                    <h2 className="text-xl font-bold tracking-tight text-dark-50">
+                      {t('dashboard.emptyState.title')}
+                    </h2>
+                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-dark-400">
+                      {t('dashboard.emptyState.description')}
+                    </p>
+                  </div>
+                  <Link
+                    to="/subscription/purchase"
+                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 p-3.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-600"
+                  >
+                    {t('dashboard.emptyState.action')}
+                    <ChevronRightIcon className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
+              <Link
+                to="/subscription/purchase"
+                className={cn(
+                  'flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 p-3.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-600',
+                  !trialInfo?.is_available && 'lg:hidden',
+                )}
+              >
+                <span className="text-base">+</span>{' '}
+                {t('subscriptions.browsePlans', 'Посмотреть тарифы и купить подписку')}
+              </Link>
+            </div>
           )}
-          <Link
-            to="/subscription/purchase"
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent-500 p-3.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-600"
-          >
-            <span className="text-base">+</span>{' '}
-            {t('subscriptions.browsePlans', 'Посмотреть тарифы и купить подписку')}
-          </Link>
         </div>
-      )}
+
+        <aside className="hidden lg:sticky lg:top-6 lg:block">
+          <div className="flex min-h-[280px] flex-col justify-between rounded-3xl border border-dark-700/60 bg-dark-900/70 p-6">
+            <div>
+              <span className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-500/10 text-accent-400">
+                <AgentIcon className="h-6 w-6" />
+              </span>
+              <h2 className="text-lg font-bold tracking-tight text-dark-50">
+                {t('dashboard.supportCard.title')}
+              </h2>
+              <p className="mt-2 text-sm leading-relaxed text-dark-400">
+                {t('dashboard.supportCard.description')}
+              </p>
+            </div>
+            <Link
+              to="/support"
+              className="group mt-6 flex min-h-12 items-center justify-between rounded-2xl border border-accent-500/25 bg-accent-500/10 px-4 text-sm font-semibold text-accent-300 transition-colors hover:bg-accent-500/15"
+            >
+              {t('dashboard.supportCard.action')}
+              <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+        </aside>
+      </div>
 
       {/* Promo Offers */}
       <PromoOffersSection />
-
-      {/* Stats Grid */}
-      <div className="hidden lg:block">
-        <StatsGrid
-          balanceRubles={balanceData?.balance_rubles || 0}
-          referralCount={referralInfo?.total_referrals || 0}
-          earningsRubles={referralInfo?.available_balance_rubles || 0}
-          refLoading={refLoading}
-        />
-      </div>
 
       {/* Fortune Wheel Banner */}
       {wheelConfig?.is_enabled && (

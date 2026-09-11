@@ -271,6 +271,16 @@
     "title": "个人中心",
     "welcome": "欢迎，{{name}}！",
     "welcomeNoName": "欢迎！",
+    "emptyState": {
+      "title": "选择合适的套餐",
+      "description": "购买订阅以连接设备并使用服务。",
+      "action": "查看套餐"
+    },
+    "supportCard": {
+      "title": "需要帮助？",
+      "description": "我们可以帮助您完成连接、付款和服务设置。",
+      "action": "打开客服"
+    },
     "yourSubscription": "您的订阅",
     "quickActions": "快捷操作",
     "viewSubscription": "管理订阅",

@@ -40,9 +40,10 @@ export default function PurchaseCTAButton({
     ? t('subscription.cta.expiredHint')
     : isTrial
       ? t('subscription.cta.trialHint')
-      : isMultiTariff
-        ? t('subscription.cta.renewHint', 'Продление подписки')
-        : t('subscription.cta.activeHint');
+      : t('subscription.cta.activeHint');
+
+  const displayButtonText =
+    isMultiTariff && !isExpired && !isTrial ? t('subscription.manageTariff') : buttonText;
 
   // Renewal uses the same tariff-first flow as a new purchase. Passing the
   // subscription ID keeps the operation attached to the exact subscription.
@@ -55,9 +56,7 @@ export default function PurchaseCTAButton({
         className="group inline-flex min-h-10 items-center gap-2 rounded-xl border border-accent-500/30 bg-accent-500/10 px-3 py-2 text-xs font-medium text-accent-300 transition-colors hover:bg-accent-500/15"
       >
         <SubscriptionIcon className="h-4 w-4" />
-        <span>
-          {isMultiTariff && !isExpired && !isTrial ? t('subscription.manageTariff') : buttonText}
-        </span>
+        <span>{displayButtonText}</span>
         <ChevronRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
       </Link>
     );
@@ -93,7 +92,7 @@ export default function PurchaseCTAButton({
               <SubscriptionIcon className="h-[18px] w-[18px]" />
             </div>
             <div>
-              <div className="text-[15px] font-semibold text-dark-50">{buttonText}</div>
+              <div className="text-[15px] font-semibold text-dark-50">{displayButtonText}</div>
               <div className="text-[12px] text-dark-400">{hintText}</div>
             </div>
           </div>

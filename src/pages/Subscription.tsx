@@ -33,11 +33,7 @@ import {
 } from '../components/icons';
 import { useHaptic, usePlatform } from '../platform';
 import { resolveConnectionUrlForUi } from '../utils/connectionLink';
-import {
-  getErrorMessage,
-  getInsufficientBalanceError,
-  getFlagEmoji,
-} from '../utils/subscriptionHelpers';
+import { getErrorMessage, getInsufficientBalanceError } from '../utils/subscriptionHelpers';
 import { openPaymentUrl } from '../utils/openPaymentUrl';
 import { useToast } from '../components/Toast';
 import {
@@ -52,7 +48,6 @@ import {
   lavaUiState,
   type LavaUiState,
 } from '../utils/lavaRecurring';
-import Twemoji from 'react-twemoji';
 import { DeviceTopupSheet } from '../components/subscription/sheets/DeviceTopupSheet';
 import { DeviceReductionSheet } from '../components/subscription/sheets/DeviceReductionSheet';
 import { TrafficTopupSheet } from '../components/subscription/sheets/TrafficTopupSheet';
@@ -160,6 +155,10 @@ export default function Subscription() {
   );
   const shouldHideConnectionLink =
     subscription?.hide_subscription_link || connectionLink?.hide_link;
+  const canCopyConnectionLink = Boolean(displayedConnectionUrl && !shouldHideConnectionLink);
+  const canReissueAccess = Boolean(
+    subscription && (subscription.is_active || subscription.is_limited) && !subscription.is_trial,
+  );
 
   // Traffic zone (theme-aware) — called unconditionally at top level
   const usedPercent = trafficData?.traffic_used_percent ?? subscription?.traffic_used_percent ?? 0;
@@ -293,7 +292,6 @@ export default function Subscription() {
       tariffId: subscription.tariff_id,
     });
   const hasSubscriptionSettings =
-    Boolean(subscription?.servers?.length) ||
     canConfigureAutopay ||
     (!subscription?.is_trial && (sbpUiStateValue !== 'hidden' || lavaUiStateValue !== 'hidden'));
 
@@ -762,41 +760,75 @@ export default function Subscription() {
                 />
               </div>
 
-              {/* ─── Link actions ─── */}
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <PurchaseCTAButton
-                  subscription={subscription}
-                  isMultiTariff={isMultiTariff}
-                  compact
-                />
-                {displayedConnectionUrl && !shouldHideConnectionLink && (
-                  <button
-                    onClick={copyUrl}
-                    className="flex min-h-10 items-center gap-2 rounded-xl border border-dark-700/60 bg-dark-800/40 px-3 py-2 text-xs font-medium text-dark-300 transition-colors hover:bg-dark-800 hover:text-dark-100"
-                    aria-label={t('subscription.copyLink')}
-                    title={t('subscription.copyLink')}
-                  >
-                    {copied ? <CheckIcon /> : <CopyIcon />}
-                    {copied ? t('subscription.copied') : t('subscription.copyLink')}
-                  </button>
-                )}
-                {(subscription.is_active || subscription.is_limited) && !subscription.is_trial && (
-                  <button
-                    type="button"
-                    onClick={handleRevoke}
-                    disabled={revokeMutation.isPending || revokeCooldown > 0}
-                    className="flex min-h-10 items-center gap-2 rounded-xl border border-dark-700/60 bg-dark-800/40 px-3 py-2 text-xs font-medium text-dark-400 transition-colors hover:border-warning-500/25 hover:bg-warning-500/[0.07] hover:text-warning-400 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <RefreshIcon className="h-3.5 w-3.5" spinning={revokeMutation.isPending} />
-                    {revokeCooldown > 0
-                      ? t('subscription.revoke.cooldown', {
-                          minutes: Math.floor(revokeCooldown / 60),
-                          seconds: revokeCooldown % 60,
-                        })
-                      : t('subscription.revoke.button')}
-                  </button>
-                )}
+              {/* ─── Renewal ─── */}
+              <div className="mb-4">
+                <PurchaseCTAButton subscription={subscription} isMultiTariff={isMultiTariff} />
               </div>
+
+              {/* ─── Access management ─── */}
+              {canCopyConnectionLink || canReissueAccess ? (
+                <div className="mb-5">
+                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-dark-400">
+                    {t('subscription.accessManagement')}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {canCopyConnectionLink && (
+                      <button
+                        type="button"
+                        onClick={copyUrl}
+                        className="group flex min-h-[72px] items-center gap-3 rounded-[14px] p-3.5 text-left transition-colors hover:bg-dark-50/[0.04]"
+                        style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
+                        aria-label={t('subscription.copyConnectionLink')}
+                      >
+                        <span
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-accent-400"
+                          style={{ background: 'rgba(var(--color-accent-400), 0.1)' }}
+                        >
+                          {copied ? <CheckIcon /> : <CopyIcon />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={`block text-sm font-semibold ${copied ? 'text-success-400' : 'text-dark-100'}`}
+                          >
+                            {copied
+                              ? t('subscription.copied')
+                              : t('subscription.copyConnectionLink')}
+                          </span>
+                          <span className="mt-0.5 block text-[11px] leading-relaxed text-dark-400">
+                            {t('subscription.copyLinkHint')}
+                          </span>
+                        </span>
+                      </button>
+                    )}
+                    {canReissueAccess && (
+                      <button
+                        type="button"
+                        onClick={handleRevoke}
+                        disabled={revokeMutation.isPending || revokeCooldown > 0}
+                        className="group flex min-h-[72px] items-center gap-3 rounded-[14px] p-3.5 text-left transition-colors hover:border-warning-500/25 hover:bg-warning-500/[0.07] disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-warning-500/10 text-warning-400">
+                          <RefreshIcon className="h-4 w-4" spinning={revokeMutation.isPending} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-dark-100 transition-colors group-hover:text-warning-400">
+                            {revokeCooldown > 0
+                              ? t('subscription.revoke.cooldown', {
+                                  minutes: Math.floor(revokeCooldown / 60),
+                                  seconds: revokeCooldown % 60,
+                                })
+                              : t('subscription.revoke.accessButton')}
+                          </span>
+                          <span className="mt-0.5 block text-[11px] leading-relaxed text-dark-400">
+                            {t('subscription.revoke.description')}
+                          </span>
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : null}
               {revokeMutation.error && (
                 <p className="mb-3 text-sm text-error-400">
                   {getErrorMessage(revokeMutation.error)}
@@ -883,39 +915,6 @@ export default function Subscription() {
                   <h3 className="text-sm font-semibold text-dark-100">
                     {t('subscription.settingsTitle')}
                   </h3>
-                </div>
-              )}
-
-              {/* ─── Locations ─── */}
-              {subscription.servers && subscription.servers.length > 0 && (
-                <div
-                  className="mb-3 flex flex-col justify-between gap-3 rounded-[14px] p-3.5 sm:flex-row sm:items-center"
-                  style={{ background: g.innerBg, border: `1px solid ${g.innerBorder}` }}
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-dark-50">
-                      {t('subscription.locationsLabel')}
-                    </div>
-                    <div className="mt-0.5 text-[11px] text-dark-400">
-                      {t('subscription.locations', { count: subscription.servers.length })}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {subscription.servers.map((server) => (
-                      <span
-                        key={server.uuid}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-medium text-dark-300"
-                        style={{ background: g.innerBorder, border: `1px solid ${g.trackBg}` }}
-                      >
-                        {server.country_code && (
-                          <span className="text-xs">{getFlagEmoji(server.country_code)}</span>
-                        )}
-                        <Twemoji options={{ className: 'twemoji', folder: 'svg', ext: '.svg' }}>
-                          {server.name}
-                        </Twemoji>
-                      </span>
-                    ))}
-                  </div>
                 </div>
               )}
 

@@ -382,6 +382,9 @@
     "getSubscription": "获取订阅",
     "connectionInfo": "连接信息",
     "copyLink": "复制链接",
+    "accessManagement": "访问管理",
+    "copyConnectionLink": "复制连接链接",
+    "copyLinkHint": "用于手动连接设备",
     "copied": "已复制！",
     "showQR": "显示二维码",
     "downloadConfig": "下载配置",
@@ -517,6 +520,7 @@
     "revoke": {
       "title": "重新签发订阅",
       "button": "重新签发订阅",
+      "accessButton": "重新签发访问权限",
       "description": "新链接，设备重置",
       "warning": "此操作将生成新的连接链接，重置所有已连接设备，并使旧链接失效。继续？",
       "confirmBtn": "重新签发",

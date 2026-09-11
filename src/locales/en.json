@@ -420,6 +420,9 @@
     },
     "connectionInfo": "Connection Info",
     "copyLink": "Copy Link",
+    "accessManagement": "Access management",
+    "copyConnectionLink": "Copy connection link",
+    "copyLinkHint": "For manually connecting a device",
     "copied": "Copied!",
     "showQR": "Show QR Code",
     "downloadConfig": "Download Config",
@@ -671,6 +674,7 @@
     "revoke": {
       "title": "Reissue Subscription",
       "button": "Reissue Subscription",
+      "accessButton": "Reissue access",
       "description": "New link, device reset",
       "warning": "This will generate a new connection link, reset all connected devices, and invalidate the old link. Continue?",
       "confirmBtn": "Reissue",

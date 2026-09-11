@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router';
 
 import {
@@ -10,8 +11,11 @@ import {
   setCachedBranding,
 } from '@/api/branding';
 import TicketNotificationBell from '@/components/TicketNotificationBell';
+import { themeColorsApi } from '@/api/themeColors';
+import { useTheme } from '@/hooks/useTheme';
 import type { TelegramPlatform } from '@/hooks/useTelegramSDK';
 import { cn } from '@/lib/utils';
+import { MoonIcon, SunIcon } from '@/components/icons';
 
 const FALLBACK_NAME = import.meta.env.VITE_APP_NAME || 'Cabinet';
 const FALLBACK_LOGO = import.meta.env.VITE_APP_LOGO || 'V';
@@ -34,8 +38,10 @@ export function AppHeader({
   contentSafeAreaInset,
   telegramPlatform,
 }: AppHeaderProps) {
+  const { t } = useTranslation();
   const location = useLocation();
   const [logoLoaded, setLogoLoaded] = useState(() => isLogoPreloaded());
+  const { isDark, toggleTheme } = useTheme();
 
   const { data: branding } = useQuery({
     queryKey: ['branding'],
@@ -56,6 +62,13 @@ export function AppHeader({
   const logoLetter = branding?.logo_letter || FALLBACK_LOGO;
   const hasCustomLogo = branding?.has_custom_logo || false;
   const logoUrl = branding ? brandingApi.getLogoUrl(branding) : null;
+
+  const { data: enabledThemes } = useQuery({
+    queryKey: ['enabled-themes'],
+    queryFn: themeColorsApi.getEnabledThemes,
+    staleTime: 1000 * 60 * 5,
+  });
+  const canToggleTheme = enabledThemes?.dark && enabledThemes?.light;
 
   return (
     <header
@@ -95,10 +108,23 @@ export function AppHeader({
             )}
           </Link>
 
-          <TicketNotificationBell
-            isAdmin={location.pathname.startsWith('/admin')}
-            className="h-11 w-11 justify-center !p-0"
-          />
+          <div className="flex shrink-0 items-center gap-2">
+            {canToggleTheme && (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-dark-700/50 bg-dark-800/60 text-dark-300 transition-colors hover:border-accent-500/30 hover:text-accent-400"
+                aria-label={isDark ? t('theme.light') : t('theme.dark')}
+                title={isDark ? t('theme.light') : t('theme.dark')}
+              >
+                {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+              </button>
+            )}
+            <TicketNotificationBell
+              isAdmin={location.pathname.startsWith('/admin')}
+              className="h-11 w-11 justify-center !p-0"
+            />
+          </div>
         </div>
       </div>
     </header>

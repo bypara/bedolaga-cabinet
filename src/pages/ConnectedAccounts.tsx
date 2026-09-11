@@ -16,9 +16,12 @@ import { getTelegramInitData } from '../hooks/useTelegramSDK';
 import { usePlatform, useIsTelegram } from '@/platform/hooks/usePlatform';
 import { useAuthStore } from '../store/auth';
 import { isValidEmail } from '../utils/validation';
+import { useCountdown } from '../hooks/useCountdown';
+import { UI } from '../config/constants';
 import type { LinkedProvider } from '../types';
 import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { WebBackButton } from '../components/WebBackButton';
+import { CheckIcon } from '@/components/icons';
 
 const OAUTH_PROVIDERS = ['google', 'yandex', 'discord', 'vk'];
 
@@ -327,6 +330,14 @@ export default function ConnectedAccounts() {
   // one-time code was mailed to it; verifying the code yields the merge token.
   const [emailMergeCodePending, setEmailMergeCodePending] = useState(false);
   const [emailMergeCode, setEmailMergeCode] = useState('');
+
+  // Verified email replacement flow. The backend sends a one-time code to the
+  // new address before changing the sign-in identifier.
+  const [emailChangeStep, setEmailChangeStep] = useState<'email' | 'code' | 'success' | null>(null);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailChangeCode, setEmailChangeCode] = useState('');
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
+  const [emailChangeResendCooldown, startEmailChangeResendCooldown] = useCountdown();
   const setUser = useAuthStore((state) => state.setUser);
 
   const { data: emailAuthConfig } = useQuery<EmailAuthEnabled>({
@@ -454,6 +465,96 @@ export default function ConnectedAccounts() {
       setEmailError(getApiErrorMessage(err, t('profile.emailMergeCodeInvalid')));
     },
   });
+
+  const refreshLinkedEmail = useCallback(async () => {
+    const updatedUser = await authApi.getMe();
+    setUser(updatedUser);
+    await queryClient.invalidateQueries({ queryKey: ['linked-providers'] });
+  }, [queryClient, setUser]);
+
+  const requestEmailChangeMutation = useMutation({
+    mutationFn: (email: string) => authApi.requestEmailChange(email),
+    onSuccess: async (response) => {
+      setEmailChangeError(null);
+      if (response.expires_in_minutes === 0) {
+        setEmailChangeStep('success');
+        await refreshLinkedEmail();
+        return;
+      }
+      setEmailChangeStep('code');
+      setEmailChangeCode('');
+      startEmailChangeResendCooldown(UI.RESEND_COOLDOWN_SEC);
+    },
+    onError: (err: unknown) => {
+      const detail = getApiErrorMessage(err, '');
+      if (detail.includes('already registered') || detail.includes('already in use')) {
+        setEmailChangeError(t('profile.changeEmail.emailAlreadyUsed'));
+      } else if (detail.includes('same as current')) {
+        setEmailChangeError(t('profile.changeEmail.sameEmail'));
+      } else if (detail.includes('rate limit') || detail.includes('too many')) {
+        setEmailChangeError(t('profile.changeEmail.tooManyRequests'));
+      } else {
+        setEmailChangeError(detail || t('common.error'));
+      }
+    },
+  });
+
+  const verifyEmailChangeMutation = useMutation({
+    mutationFn: (code: string) => authApi.verifyEmailChange(code),
+    onSuccess: async () => {
+      setEmailChangeError(null);
+      setEmailChangeStep('success');
+      await refreshLinkedEmail();
+    },
+    onError: (err: unknown) => {
+      const detail = getApiErrorMessage(err, '');
+      if (detail.includes('invalid') || detail.includes('wrong')) {
+        setEmailChangeError(t('profile.changeEmail.invalidCode'));
+      } else if (detail.includes('expired')) {
+        setEmailChangeError(t('profile.changeEmail.codeExpired'));
+      } else {
+        setEmailChangeError(detail || t('common.error'));
+      }
+    },
+  });
+
+  const resetEmailChange = useCallback(() => {
+    setEmailChangeStep(null);
+    setNewEmail('');
+    setEmailChangeCode('');
+    setEmailChangeError(null);
+    startEmailChangeResendCooldown(0);
+  }, [startEmailChangeResendCooldown]);
+
+  useEffect(() => {
+    if (emailChangeStep !== 'success') return;
+    const timer = setTimeout(resetEmailChange, 3000);
+    return () => clearTimeout(timer);
+  }, [emailChangeStep, resetEmailChange]);
+
+  const handleRequestEmailChange = (currentEmail: string | null) => {
+    setEmailChangeError(null);
+    const normalizedEmail = newEmail.trim();
+    if (!isValidEmail(normalizedEmail)) {
+      setEmailChangeError(t('profile.invalidEmail'));
+      return;
+    }
+    if (currentEmail && normalizedEmail.toLowerCase() === currentEmail.toLowerCase()) {
+      setEmailChangeError(t('profile.changeEmail.sameEmail'));
+      return;
+    }
+    requestEmailChangeMutation.mutate(normalizedEmail);
+  };
+
+  const handleVerifyEmailChange = () => {
+    setEmailChangeError(null);
+    const code = emailChangeCode.trim();
+    if (!/^\d{6}$/.test(code)) {
+      setEmailChangeError(t('profile.changeEmail.invalidCode'));
+      return;
+    }
+    verifyEmailChangeMutation.mutate(code);
+  };
 
   const handleVerifyMergeCode = (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -704,6 +805,21 @@ export default function ConnectedAccounts() {
                 {provider.linked ? (
                   <>
                     <span className="text-sm text-success-500">{t('profile.accounts.linked')}</span>
+                    {provider.provider === 'email' && isEmailAuthEnabled && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (emailChangeStep) {
+                            resetEmailChange();
+                          } else {
+                            setEmailChangeStep('email');
+                          }
+                        }}
+                      >
+                        {emailChangeStep ? t('common.cancel') : t('profile.changeEmail.button')}
+                      </Button>
+                    )}
                     {canUnlink(provider) && (
                       <Button
                         variant={confirmingUnlink === provider.provider ? 'destructive' : 'outline'}
@@ -856,6 +972,169 @@ export default function ConnectedAccounts() {
                           </Button>
                         </form>
                       )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
+
+            {/* Inline verified email replacement flow */}
+            {provider.provider === 'email' && provider.linked && (
+              <AnimatePresence mode="wait">
+                {emailChangeStep === 'email' && (
+                  <motion.div
+                    key="email-change-address"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <form
+                      className="mt-4 space-y-3 border-t border-dark-700/30 pt-4"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        handleRequestEmailChange(provider.identifier);
+                      }}
+                    >
+                      <p className="text-sm text-dark-400">
+                        {t('profile.changeEmail.description')}
+                      </p>
+                      <div>
+                        <label htmlFor="email-change-input" className="label">
+                          {t('profile.changeEmail.newEmail')}
+                        </label>
+                        <input
+                          id="email-change-input"
+                          type="email"
+                          value={newEmail}
+                          onChange={(event) => setNewEmail(event.target.value)}
+                          placeholder="new@email.com"
+                          className="input"
+                          autoComplete="email"
+                          autoFocus={!inTelegram}
+                        />
+                      </div>
+                      {emailChangeError && (
+                        <div
+                          role="alert"
+                          className="rounded-xl border border-error-500/30 bg-error-500/10 p-3 text-sm text-error-400"
+                        >
+                          {emailChangeError}
+                        </div>
+                      )}
+                      <Button
+                        type="submit"
+                        fullWidth
+                        loading={requestEmailChangeMutation.isPending}
+                        disabled={!newEmail.trim()}
+                      >
+                        {t('profile.changeEmail.sendCode')}
+                      </Button>
+                    </form>
+                  </motion.div>
+                )}
+
+                {emailChangeStep === 'code' && (
+                  <motion.div
+                    key="email-change-code"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <form
+                      className="mt-4 space-y-3 border-t border-dark-700/30 pt-4"
+                      onSubmit={(event) => {
+                        event.preventDefault();
+                        handleVerifyEmailChange();
+                      }}
+                    >
+                      <div className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-400">
+                        {t('profile.changeEmail.codeSentTo', { email: newEmail })}
+                      </div>
+                      <div>
+                        <label htmlFor="email-change-code" className="label">
+                          {t('profile.changeEmail.verificationCode')}
+                        </label>
+                        <input
+                          id="email-change-code"
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={6}
+                          value={emailChangeCode}
+                          onChange={(event) =>
+                            setEmailChangeCode(event.target.value.replace(/\D/g, ''))
+                          }
+                          placeholder="000000"
+                          className="input text-center text-xl tracking-[0.5em]"
+                          autoComplete="one-time-code"
+                          autoFocus={!inTelegram}
+                        />
+                      </div>
+                      {emailChangeError && (
+                        <div
+                          role="alert"
+                          className="rounded-xl border border-error-500/30 bg-error-500/10 p-3 text-sm text-error-400"
+                        >
+                          {emailChangeError}
+                        </div>
+                      )}
+                      <Button
+                        type="submit"
+                        fullWidth
+                        loading={verifyEmailChangeMutation.isPending}
+                        disabled={emailChangeCode.length !== 6}
+                      >
+                        {t('profile.changeEmail.verify')}
+                      </Button>
+                      <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmailChangeStep('email');
+                            setEmailChangeCode('');
+                            setEmailChangeError(null);
+                          }}
+                          className="text-sm text-dark-400 transition-colors hover:text-dark-200"
+                        >
+                          {t('common.back')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => requestEmailChangeMutation.mutate(newEmail.trim())}
+                          disabled={
+                            emailChangeResendCooldown > 0 || requestEmailChangeMutation.isPending
+                          }
+                          className="text-sm text-accent-400 transition-colors hover:text-accent-300 disabled:text-dark-500"
+                        >
+                          {emailChangeResendCooldown > 0
+                            ? t('profile.changeEmail.resendIn', {
+                                seconds: emailChangeResendCooldown,
+                              })
+                            : t('profile.changeEmail.resendCode')}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                )}
+
+                {emailChangeStep === 'success' && (
+                  <motion.div
+                    key="email-change-success"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-4 flex items-center gap-3 border-t border-dark-700/30 pt-4 text-success-400">
+                      <CheckIcon />
+                      <div>
+                        <p className="font-medium">{t('profile.changeEmail.success')}</p>
+                        <p className="text-sm text-dark-400">{newEmail}</p>
+                      </div>
                     </div>
                   </motion.div>
                 )}

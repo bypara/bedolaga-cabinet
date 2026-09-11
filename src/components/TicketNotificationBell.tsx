@@ -10,7 +10,7 @@ import { useWebSocket, type WSMessage } from '../hooks/useWebSocket';
 import { useHeaderHeight } from '../hooks/useHeaderHeight';
 import type { TicketNotification } from '../types';
 import { BellIcon, CheckIcon, InfoIcon } from '@/components/icons';
-import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/Spinner';
 
 interface TicketNotificationBellProps {
   isAdmin?: boolean;
@@ -301,9 +301,10 @@ export default function TicketNotificationBell({
               {t('nav.support')}
             </div>
             {isLoading ? (
-              <SkeletonGroup className="space-y-3">
-                <Skeleton variant="card" count={3} className="h-16" />
-              </SkeletonGroup>
+              <div className="flex min-h-40 flex-col items-center justify-center gap-3 p-8 text-dark-500">
+                <Spinner className="h-6 w-6" />
+                <p className="text-sm">{t('common.loading')}</p>
+              </div>
             ) : notificationsData?.items && notificationsData.items.length > 0 ? (
               notificationsData.items.map((notification: TicketNotification) => (
                 <button

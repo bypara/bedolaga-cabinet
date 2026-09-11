@@ -6,7 +6,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/auth';
 import { displayName } from '../utils/displayName';
-import { useTheme } from '../hooks/useTheme';
 import { useUserAvatar } from '../hooks/useUserAvatar';
 import { useCurrency } from '../hooks/useCurrency';
 import {
@@ -17,7 +16,6 @@ import {
 import { referralApi } from '../api/referral';
 import { balanceApi } from '../api/balance';
 import { brandingApi, type EmailAuthEnabled } from '../api/branding';
-import { themeColorsApi } from '../api/themeColors';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { Card } from '@/components/data-display/Card';
 import { Switch } from '@/components/primitives/Switch';
@@ -29,8 +27,6 @@ import {
   ChevronDownIcon,
   InfoIcon,
   LogoutIcon,
-  MoonIcon,
-  SunIcon,
   UserIcon,
   UsersIcon,
   WalletIcon,
@@ -44,7 +40,6 @@ export default function Profile() {
   const logout = useAuthStore((state) => state.logout);
   const queryClient = useQueryClient();
   const avatar = useUserAvatar(user);
-  const { isDark, toggleTheme } = useTheme();
   const { formatAmount, currencySymbol } = useCurrency();
 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -72,13 +67,6 @@ export default function Profile() {
     staleTime: 60000,
   });
   const isEmailVerificationEnabled = emailAuthConfig?.verification_enabled ?? true;
-
-  const { data: enabledThemes } = useQuery({
-    queryKey: ['enabled-themes'],
-    queryFn: themeColorsApi.getEnabledThemes,
-    staleTime: 1000 * 60 * 5,
-  });
-  const canToggleTheme = enabledThemes?.dark && enabledThemes?.light;
 
   const { data: notificationSettings, isLoading: notificationsLoading } = useQuery({
     queryKey: ['notification-settings'],
@@ -478,19 +466,6 @@ export default function Profile() {
             </span>
             <LanguageSwitcher />
           </div>
-          {canToggleTheme && (
-            <div className="mt-3 flex w-full items-center justify-between border-t border-dark-800/50 pt-4">
-              <span className="flex items-center gap-3 text-sm font-medium text-dark-200">
-                {isDark ? (
-                  <SunIcon className="h-5 w-5 text-accent-400" />
-                ) : (
-                  <MoonIcon className="h-5 w-5 text-accent-400" />
-                )}
-                {isDark ? t('theme.light') : t('theme.dark')}
-              </span>
-              <Switch checked={!isDark} onCheckedChange={toggleTheme} />
-            </div>
-          )}
         </Card>
 
         <button

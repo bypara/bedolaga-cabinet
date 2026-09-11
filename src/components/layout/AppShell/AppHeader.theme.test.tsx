@@ -6,21 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { AppHeader } from './AppHeader';
 
-const { toggleTheme, getEnabledThemes } = vi.hoisted(() => ({
-  toggleTheme: vi.fn(),
-  getEnabledThemes: vi.fn(() => Promise.resolve({ dark: true, light: true })),
-}));
+const { toggleTheme } = vi.hoisted(() => ({ toggleTheme: vi.fn() }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
-}));
-
-vi.mock('@/hooks/useTheme', () => ({
-  useTheme: () => ({ isDark: true, toggleTheme }),
-}));
-
-vi.mock('@/api/themeColors', () => ({
-  themeColorsApi: { getEnabledThemes },
 }));
 
 vi.mock('@/api/branding', () => ({
@@ -41,7 +30,6 @@ vi.mock('@/components/TicketNotificationBell', () => ({
 afterEach(() => {
   cleanup();
   toggleTheme.mockClear();
-  getEnabledThemes.mockClear();
 });
 
 describe('AppHeader theme action', () => {
@@ -55,6 +43,9 @@ describe('AppHeader theme action', () => {
             isFullscreen={false}
             safeAreaInset={{ top: 0, bottom: 0, left: 0, right: 0 }}
             contentSafeAreaInset={{ top: 0, bottom: 0, left: 0, right: 0 }}
+            isDark
+            canToggleTheme
+            onToggleTheme={toggleTheme}
           />
         </MemoryRouter>
       </QueryClientProvider>,

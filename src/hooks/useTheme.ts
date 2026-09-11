@@ -34,6 +34,28 @@ function getCachedEnabledThemes(): EnabledThemes {
 const ENABLED_THEMES_CHANGED_EVENT = 'enabledThemesChanged';
 const THEME_CHANGED_EVENT = 'themeChanged';
 
+/**
+ * Apply every browser-owned part of the theme in one synchronous operation.
+ *
+ * iOS WKWebView does not reliably repaint a background propagated from `body`
+ * to the viewport canvas when only an ancestor class changes. Giving `body`
+ * an explicit theme-dependent value forces that repaint and prevents the old
+ * page background from remaining under freshly recoloured components.
+ */
+function applyThemeToDocument(theme: Theme) {
+  if (typeof document === 'undefined') return;
+
+  const root = document.documentElement;
+  root.classList.remove('dark', 'light');
+  root.classList.add(theme);
+  root.style.colorScheme = theme;
+
+  if (document.body) {
+    document.body.style.backgroundColor =
+      theme === 'light' ? 'var(--color-light-bg, #f7e7ce)' : 'var(--color-dark-bg, #0a0f1a)';
+  }
+}
+
 // Update cache (called from admin settings)
 export function updateEnabledThemesCache(themes: EnabledThemes) {
   safeLocal.setJson(ENABLED_THEMES_KEY, themes);
@@ -80,6 +102,14 @@ export function useTheme() {
   const themeRef = useRef(theme);
   themeRef.current = theme;
 
+  const commitTheme = useCallback((newTheme: Theme) => {
+    themeRef.current = newTheme;
+    applyThemeToDocument(newTheme);
+    safeLocal.setItem(THEME_KEY, newTheme);
+    setThemeState(newTheme);
+    window.dispatchEvent(new CustomEvent(THEME_CHANGED_EVENT, { detail: newTheme }));
+  }, []);
+
   // Fetch enabled themes on mount
   useEffect(() => {
     fetchEnabledThemes().then((data) => {
@@ -88,10 +118,10 @@ export function useTheme() {
       // If current theme is disabled, switch to enabled one
       if (!data[themeRef.current]) {
         const newTheme = data.dark ? 'dark' : 'light';
-        setThemeState(newTheme);
+        commitTheme(newTheme);
       }
     });
-  }, []);
+  }, [commitTheme]);
 
   // Listen for localStorage changes (when admin updates enabled themes from other tabs)
   useEffect(() => {
@@ -103,7 +133,7 @@ export function useTheme() {
           // If current theme is now disabled, switch to enabled one
           if (!data[theme]) {
             const newTheme = data.dark ? 'dark' : 'light';
-            setThemeState(newTheme);
+            commitTheme(newTheme);
           }
         } catch {
           // Ignore parse errors
@@ -113,7 +143,7 @@ export function useTheme() {
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [theme]);
+  }, [commitTheme, theme]);
 
   // Listen for same-tab enabled themes changes (from admin settings)
   useEffect(() => {
@@ -123,7 +153,7 @@ export function useTheme() {
       // If current theme is now disabled, switch to enabled one
       if (!data[theme]) {
         const newTheme = data.dark ? 'dark' : 'light';
-        setThemeState(newTheme);
+        commitTheme(newTheme);
       }
     };
 
@@ -136,37 +166,29 @@ export function useTheme() {
         ENABLED_THEMES_CHANGED_EVENT,
         handleEnabledThemesChange as EventListener,
       );
-  }, [theme]);
+  }, [commitTheme, theme]);
 
   // Apply theme to document - also check if theme is disabled and switch
   useEffect(() => {
-    const root = document.documentElement;
-
     // If current theme is disabled, switch to the enabled one
     if (!enabledThemes[theme]) {
       const newTheme = enabledThemes.dark ? 'dark' : 'light';
       if (newTheme !== theme) {
-        setThemeState(newTheme);
+        commitTheme(newTheme);
         return; // Will re-run with correct theme
       }
     }
 
-    if (theme === 'light') {
-      root.classList.remove('dark');
-      root.classList.add('light');
-    } else {
-      root.classList.remove('light');
-      root.classList.add('dark');
-    }
-
+    applyThemeToDocument(theme);
     safeLocal.setItem(THEME_KEY, theme);
-    // Notify other useTheme() instances in the same tab
-    window.dispatchEvent(new CustomEvent(THEME_CHANGED_EVENT, { detail: theme }));
-  }, [theme, enabledThemes]);
+  }, [commitTheme, theme, enabledThemes]);
 
   // Listen for same-tab theme changes (from other useTheme() instances)
   useEffect(() => {
     const handleThemeChange = (e: CustomEvent<Theme>) => {
+      if (e.detail === themeRef.current) return;
+      themeRef.current = e.detail;
+      applyThemeToDocument(e.detail);
       setThemeState(e.detail);
     };
 
@@ -185,35 +207,31 @@ export function useTheme() {
       if (!stored) {
         const newTheme = e.matches ? 'light' : 'dark';
         if (enabledThemes[newTheme]) {
-          setThemeState(newTheme);
+          commitTheme(newTheme);
         }
       }
     };
 
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [enabledThemes]);
+  }, [commitTheme, enabledThemes]);
 
   const setTheme = useCallback(
     (newTheme: Theme) => {
       // Only allow setting if theme is enabled
       if (enabledThemes[newTheme]) {
-        setThemeState(newTheme);
+        commitTheme(newTheme);
       }
     },
-    [enabledThemes],
+    [commitTheme, enabledThemes],
   );
 
   const toggleTheme = useCallback(() => {
-    setThemeState((prev) => {
-      const newTheme = prev === 'dark' ? 'light' : 'dark';
-      // Only toggle if the new theme is enabled
-      if (enabledThemes[newTheme]) {
-        return newTheme;
-      }
-      return prev;
-    });
-  }, [enabledThemes]);
+    const newTheme = themeRef.current === 'dark' ? 'light' : 'dark';
+    if (enabledThemes[newTheme]) {
+      commitTheme(newTheme);
+    }
+  }, [commitTheme, enabledThemes]);
 
   const isDark = theme === 'dark';
   const isLight = theme === 'light';
@@ -227,10 +245,10 @@ export function useTheme() {
       setEnabledThemes(data);
       if (!data[theme]) {
         const newTheme = data.dark ? 'dark' : 'light';
-        setThemeState(newTheme);
+        commitTheme(newTheme);
       }
     });
-  }, [theme]);
+  }, [commitTheme, theme]);
 
   return {
     theme,

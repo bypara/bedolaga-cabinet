@@ -11,8 +11,6 @@ import {
   setCachedBranding,
 } from '@/api/branding';
 import TicketNotificationBell from '@/components/TicketNotificationBell';
-import { themeColorsApi } from '@/api/themeColors';
-import { useTheme } from '@/hooks/useTheme';
 import type { TelegramPlatform } from '@/hooks/useTelegramSDK';
 import { cn } from '@/lib/utils';
 import { MoonIcon, SunIcon } from '@/components/icons';
@@ -25,6 +23,9 @@ interface AppHeaderProps {
   safeAreaInset: { top: number; bottom: number; left: number; right: number };
   contentSafeAreaInset: { top: number; bottom: number; left: number; right: number };
   telegramPlatform?: TelegramPlatform;
+  isDark: boolean;
+  canToggleTheme: boolean;
+  onToggleTheme: () => void;
 }
 
 /**
@@ -37,11 +38,13 @@ export function AppHeader({
   safeAreaInset,
   contentSafeAreaInset,
   telegramPlatform,
+  isDark,
+  canToggleTheme,
+  onToggleTheme,
 }: AppHeaderProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const [logoLoaded, setLogoLoaded] = useState(() => isLogoPreloaded());
-  const { isDark, toggleTheme } = useTheme();
 
   const { data: branding } = useQuery({
     queryKey: ['branding'],
@@ -62,13 +65,6 @@ export function AppHeader({
   const logoLetter = branding?.logo_letter || FALLBACK_LOGO;
   const hasCustomLogo = branding?.has_custom_logo || false;
   const logoUrl = branding ? brandingApi.getLogoUrl(branding) : null;
-
-  const { data: enabledThemes } = useQuery({
-    queryKey: ['enabled-themes'],
-    queryFn: themeColorsApi.getEnabledThemes,
-    staleTime: 1000 * 60 * 5,
-  });
-  const canToggleTheme = enabledThemes?.dark && enabledThemes?.light;
 
   return (
     <header
@@ -112,7 +108,7 @@ export function AppHeader({
             {canToggleTheme && (
               <button
                 type="button"
-                onClick={toggleTheme}
+                onClick={onToggleTheme}
                 className="flex h-11 w-11 items-center justify-center rounded-xl border border-dark-700/50 bg-dark-800/60 text-dark-300 transition-colors hover:border-accent-500/30 hover:text-accent-400"
                 aria-label={isDark ? t('theme.light') : t('theme.dark')}
                 title={isDark ? t('theme.light') : t('theme.dark')}

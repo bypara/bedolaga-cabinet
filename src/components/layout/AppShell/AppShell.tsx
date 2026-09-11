@@ -380,6 +380,12 @@ export function AppShell({ children }: AppShellProps) {
         safeAreaInset={safeAreaInset}
         contentSafeAreaInset={contentSafeAreaInset}
         telegramPlatform={platform}
+        isDark={isDark}
+        canToggleTheme={Boolean(canToggleTheme)}
+        onToggleTheme={() => {
+          haptic.impact('light');
+          toggleTheme();
+        }}
       />
 
       {/* Mobile spacer */}

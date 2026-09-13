@@ -338,6 +338,12 @@ export default function ConnectedAccounts() {
   const [emailChangeCode, setEmailChangeCode] = useState('');
   const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
   const [emailChangeResendCooldown, startEmailChangeResendCooldown] = useCountdown();
+  const [emailVerificationFeedback, setEmailVerificationFeedback] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+  const [emailVerificationResendCooldown, startEmailVerificationResendCooldown] = useCountdown();
+  const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
 
   const { data: emailAuthConfig } = useQuery<EmailAuthEnabled>({
@@ -432,6 +438,9 @@ export default function ConnectedAccounts() {
       setEmailConfirmPassword('');
       const updatedUser = await authApi.getMe();
       setUser(updatedUser);
+      if (updatedUser.email && !updatedUser.email_verified) {
+        startEmailVerificationResendCooldown(UI.RESEND_COOLDOWN_SEC);
+      }
       queryClient.invalidateQueries({ queryKey: ['linked-providers'] });
       // Note: auth user lives in the zustand store, not in React Query —
       // the explicit setUser above IS the refresh. No ['user'] query exists.
@@ -471,6 +480,47 @@ export default function ConnectedAccounts() {
     setUser(updatedUser);
     await queryClient.invalidateQueries({ queryKey: ['linked-providers'] });
   }, [queryClient, setUser]);
+
+  const resendEmailVerificationMutation = useMutation({
+    mutationFn: () => authApi.resendVerification(),
+    onSuccess: () => {
+      setEmailVerificationFeedback({
+        type: 'success',
+        message: t('profile.verificationResent'),
+      });
+      startEmailVerificationResendCooldown(UI.RESEND_COOLDOWN_SEC);
+    },
+    onError: (err: unknown) => {
+      setEmailVerificationFeedback({
+        type: 'error',
+        message: getApiErrorMessage(err, t('common.error')),
+      });
+    },
+  });
+
+  const emailVerificationPending = Boolean(user?.email && !user.email_verified);
+
+  // The verification link may be opened in another browser tab or outside the
+  // Telegram mini app. Refresh the auth user when the cabinet becomes active
+  // again so the pending state disappears without a manual page reload.
+  useEffect(() => {
+    if (!emailVerificationPending) return;
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshLinkedEmail().catch(() => {
+          // Keep the pending state when a background refresh cannot reach the API.
+        });
+      }
+    };
+
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [emailVerificationPending, refreshLinkedEmail]);
 
   const requestEmailChangeMutation = useMutation({
     mutationFn: (email: string) => authApi.requestEmailChange(email),
@@ -804,7 +854,17 @@ export default function ConnectedAccounts() {
               <div className="flex shrink-0 flex-col items-end gap-1.5">
                 {provider.linked ? (
                   <>
-                    <span className="text-sm text-success-500">{t('profile.accounts.linked')}</span>
+                    <span
+                      className={`text-sm ${
+                        provider.provider === 'email' && emailVerificationPending
+                          ? 'text-warning-400'
+                          : 'text-success-500'
+                      }`}
+                    >
+                      {provider.provider === 'email' && emailVerificationPending
+                        ? t('profile.notVerified')
+                        : t('profile.accounts.linked')}
+                    </span>
                     {provider.provider === 'email' && isEmailAuthEnabled && (
                       <Button
                         variant="outline"
@@ -977,6 +1037,49 @@ export default function ConnectedAccounts() {
                 )}
               </AnimatePresence>
             )}
+
+            {/* A linked address is not yet a usable sign-in method until the
+                owner follows the verification link sent to that mailbox. */}
+            {provider.provider === 'email' &&
+              provider.linked &&
+              emailVerificationPending &&
+              !emailChangeStep && (
+                <div className="mt-4 space-y-3 border-t border-dark-700/30 pt-4">
+                  <div className="rounded-xl border border-warning-500/20 bg-warning-500/5 p-3">
+                    <p className="font-medium text-warning-400">{t('auth.checkEmail')}</p>
+                    <p className="mt-1 text-sm text-dark-400">{t('auth.verificationSent')}</p>
+                    <p className="mt-1 text-xs text-dark-500">{t('auth.clickLinkToVerify')}</p>
+                  </div>
+
+                  {emailVerificationFeedback && (
+                    <div
+                      role={emailVerificationFeedback.type === 'error' ? 'alert' : 'status'}
+                      className={`rounded-xl border p-3 text-sm ${
+                        emailVerificationFeedback.type === 'success'
+                          ? 'border-success-500/30 bg-success-500/10 text-success-400'
+                          : 'border-error-500/30 bg-error-500/10 text-error-400'
+                      }`}
+                    >
+                      {emailVerificationFeedback.message}
+                    </div>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    loading={resendEmailVerificationMutation.isPending}
+                    disabled={emailVerificationResendCooldown > 0}
+                    onClick={() => {
+                      setEmailVerificationFeedback(null);
+                      resendEmailVerificationMutation.mutate();
+                    }}
+                  >
+                    {emailVerificationResendCooldown > 0
+                      ? t('profile.resendIn', { seconds: emailVerificationResendCooldown })
+                      : t('profile.resendVerification')}
+                  </Button>
+                </div>
+              )}
 
             {/* Inline verified email replacement flow */}
             {provider.provider === 'email' && provider.linked && (

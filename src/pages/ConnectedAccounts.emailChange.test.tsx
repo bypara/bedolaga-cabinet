@@ -6,15 +6,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/Toast';
 import { PlatformProvider } from '@/platform/PlatformProvider';
 
-const { getLinkedProviders, requestEmailChange, verifyEmailChange, getMe, setUser } = vi.hoisted(
-  () => ({
-    getLinkedProviders: vi.fn(),
-    requestEmailChange: vi.fn(),
-    verifyEmailChange: vi.fn(),
-    getMe: vi.fn(),
+const {
+  getLinkedProviders,
+  requestEmailChange,
+  verifyEmailChange,
+  resendVerification,
+  getMe,
+  setUser,
+  authState,
+} = vi.hoisted(() => ({
+  getLinkedProviders: vi.fn(),
+  requestEmailChange: vi.fn(),
+  verifyEmailChange: vi.fn(),
+  resendVerification: vi.fn(),
+  getMe: vi.fn(),
+  setUser: vi.fn(),
+  authState: {
+    user: { id: 1, email: 'old@example.com', email_verified: true },
     setUser: vi.fn(),
-  }),
-);
+  },
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -25,6 +36,7 @@ vi.mock('../api/auth', () => ({
     getLinkedProviders,
     requestEmailChange,
     verifyEmailChange,
+    resendVerification,
     getMe,
   },
 }));
@@ -36,7 +48,8 @@ vi.mock('../api/branding', () => ({
 }));
 
 vi.mock('../store/auth', () => ({
-  useAuthStore: (selector: (state: Record<string, unknown>) => unknown) => selector({ setUser }),
+  useAuthStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ ...authState, setUser }),
 }));
 
 async function renderPage() {
@@ -59,8 +72,10 @@ beforeEach(() => {
   getLinkedProviders.mockReset();
   requestEmailChange.mockReset();
   verifyEmailChange.mockReset();
+  resendVerification.mockReset();
   getMe.mockReset();
   setUser.mockReset();
+  authState.user = { id: 1, email: 'old@example.com', email_verified: true };
 
   getLinkedProviders.mockResolvedValue({
     providers: [{ provider: 'email', linked: true, identifier: 'old@example.com' }],
@@ -71,6 +86,7 @@ beforeEach(() => {
     expires_in_minutes: 15,
   });
   verifyEmailChange.mockResolvedValue({ message: 'changed', email: 'new@example.com' });
+  resendVerification.mockResolvedValue({ message: 'sent' });
   getMe.mockResolvedValue({ id: 1, email: 'new@example.com', email_verified: true });
 });
 
@@ -97,5 +113,24 @@ describe('ConnectedAccounts email replacement', () => {
     expect(setUser).toHaveBeenCalledWith(
       expect.objectContaining({ email: 'new@example.com', email_verified: true }),
     );
+  });
+
+  it('shows an explicit pending state and can resend verification for an unverified email', async () => {
+    authState.user = { id: 1, email: 'old@example.com', email_verified: false };
+    getMe.mockResolvedValue({ id: 1, email: 'old@example.com', email_verified: false });
+
+    await renderPage();
+
+    expect(await screen.findByText('profile.notVerified')).toBeTruthy();
+    expect(screen.getByText('auth.checkEmail')).toBeTruthy();
+    expect(screen.getByText('auth.clickLinkToVerify')).toBeTruthy();
+
+    window.dispatchEvent(new Event('focus'));
+    await waitFor(() => expect(getMe).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'profile.resendVerification' }));
+
+    await waitFor(() => expect(resendVerification).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('profile.verificationResent')).toBeTruthy();
   });
 });

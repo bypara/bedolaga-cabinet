@@ -10,11 +10,8 @@ file(name=$name, body=$body) where {
   // scope (`src/platform/**`, `src/utils/clipboard.ts`) — an anchored path
   // fragment, not a bare "platform" substring that would also spare any
   // unrelated file with "platform" in its name.
-  $name <: not includes "src/platform/",
-  $name <: not includes or {
-    "utils/clipboard.ts",
-    "utils/clipboard.js"
-  },
+  $name <: not r".*src[/\\]platform[/\\].*",
+  $name <: not r".*utils[/\\]clipboard\.(ts|js)",
   $body <: contains bubble or {
     `window.confirm` as $use where {
       register_diagnostic(span=$use, message="Use useNativeDialog().confirm — window.confirm is silently ignored in the Telegram WebView.", severity="error")

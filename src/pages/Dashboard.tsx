@@ -332,7 +332,9 @@ export default function Dashboard() {
           </span>
           <span className="max-w-[45%] shrink-0 text-right">
             <span className="block truncate text-base font-semibold text-dark-100">
-              {formatAmount(balanceData?.balance_rubles || 0)} {currencySymbol}
+              {formatAmount(balanceData?.balance_rubles || 0)}
+              {'\u00A0'}
+              {currencySymbol}
             </span>
             <span className="mt-0.5 block text-xs font-medium text-dark-500">
               {t('nav.balance')}

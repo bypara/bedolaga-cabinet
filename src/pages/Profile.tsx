@@ -190,7 +190,9 @@ export default function Profile() {
               <div className="min-w-0">
                 <span className="block font-medium text-dark-100">{t('nav.balance')}</span>
                 <span className="block truncate text-xs text-dark-500">
-                  {formatAmount(balanceData?.balance_rubles || 0)} {currencySymbol}
+                  {formatAmount(balanceData?.balance_rubles || 0)}
+                  {'\u00A0'}
+                  {currencySymbol}
                 </span>
               </div>
               <ArrowRightIcon className="h-4 w-4 shrink-0 text-dark-500 transition-transform group-hover:translate-x-0.5" />

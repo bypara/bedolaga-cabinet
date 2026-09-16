@@ -1,7 +1,10 @@
 import {
   PiArrowsInSimple,
+  PiReceipt,
+  PiSortAscending,
   PiArrowsOutSimple,
   PiCode,
+  PiMapPin,
   PiMapTrifold,
   PiNetwork,
   PiSlidersHorizontal,
@@ -38,6 +41,7 @@ import {
   PiEye,
   PiFunnel,
   PiDotsSix,
+  PiDotsThree,
   PiDotsSixVertical,
   PiHeartbeat,
   PiClockCounterClockwise,
@@ -305,6 +309,11 @@ export const FilterIcon = ({ className }: IconProps) => (
   <PiFunnel className={cn('h-5 w-5', className)} />
 );
 
+/** «Ещё действия» — меню ⋯ в шапках карточек. */
+export const MoreIcon = ({ className }: IconProps) => (
+  <PiDotsThree className={cn('h-5 w-5', className)} />
+);
+
 export const GripIcon = ({ className }: IconProps) => (
   <PiDotsSix className={cn('h-5 w-5', className)} />
 );
@@ -523,4 +532,19 @@ export const CellSignalIcon = ({ className }: IconProps) => (
 /** Раздел BSCHEKER: радар. */
 export const RadarIcon = ({ className }: IconProps) => (
   <LuRadar className={cn('h-5 w-5', className)} />
+);
+
+/** GEO-РФ — проверка из городов. */
+export const MapPinIcon = ({ className }: IconProps) => (
+  <PiMapPin className={cn('h-5 w-5', className)} />
+);
+
+/** Сортировка списка — кнопка-иконка рядом с поиском. */
+export const SortAscendingIcon = ({ className }: IconProps) => (
+  <PiSortAscending className={cn('h-5 w-5', className)} />
+);
+
+/** Потрачено за всё время — плитка карточки пользователя. */
+export const ReceiptIcon = ({ className }: IconProps) => (
+  <PiReceipt className={cn('h-5 w-5', className)} />
 );

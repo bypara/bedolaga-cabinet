@@ -228,7 +228,9 @@ export default function SubscriptionCardExpired({
           <div
             className={`mt-1 truncate text-sm font-semibold ${hasBalance ? 'text-success-400' : 'text-dark-300'}`}
           >
-            {formatAmount(balanceRubles)} {currencySymbol}
+            {formatAmount(balanceRubles)}
+            {'\u00A0'}
+            {currencySymbol}
           </div>
         </div>
       </div>

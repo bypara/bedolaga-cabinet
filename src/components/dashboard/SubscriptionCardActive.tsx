@@ -81,7 +81,7 @@ export default function SubscriptionCardActive({
           />
           <h2
             id="current-subscription-title"
-            className="truncate text-xl font-bold tracking-tight text-dark-50"
+            className="line-clamp-2 break-words text-xl font-bold tracking-tight text-dark-50"
           >
             {subscription.tariff_name || t('subscription.currentPlan')}
           </h2>

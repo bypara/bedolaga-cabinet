@@ -37,8 +37,10 @@ import {
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { BackgroundHost } from './components/backgrounds/BackgroundHost';
 import { PermissionRoute } from '@/components/auth/PermissionRoute';
+import { RemountOnParam } from '@/components/RemountOnParam';
 import { saveReturnUrl } from './utils/token';
 import LegalOnboardingGate from './components/LegalOnboardingGate';
+import { ScreenViewReporter } from './components/ScreenViewReporter';
 import { useAnalyticsCounters } from './hooks/useAnalyticsCounters';
 import { useSiteVerification } from './hooks/useSiteVerification';
 import { useDoneKey } from './hooks/useDoneKey';
@@ -196,7 +198,19 @@ function ProtectedRoute({
   }
 
   return (
-    <LegalOnboardingGate>{withLayout ? <Layout>{children}</Layout> : children}</LegalOnboardingGate>
+    <LegalOnboardingGate>
+      {withLayout ? (
+        <Layout>
+          <ScreenViewReporter />
+          {children}
+        </Layout>
+      ) : (
+        <>
+          <ScreenViewReporter />
+          {children}
+        </>
+      )}
+    </LegalOnboardingGate>
   );
 }
 
@@ -1107,7 +1121,9 @@ function App() {
           element={
             <PermissionRoute permission="partners:read">
               <LazyPage>
-                <AdminPartnerDetail />
+                <RemountOnParam name="userId">
+                  <AdminPartnerDetail />
+                </RemountOnParam>
               </LazyPage>
             </PermissionRoute>
           }
@@ -1297,7 +1313,9 @@ function App() {
           element={
             <PermissionRoute permission="users:read">
               <LazyPage>
-                <AdminUserDetail />
+                <RemountOnParam name="id">
+                  <AdminUserDetail />
+                </RemountOnParam>
               </LazyPage>
             </PermissionRoute>
           }

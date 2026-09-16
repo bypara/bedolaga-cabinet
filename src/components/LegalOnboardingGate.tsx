@@ -168,7 +168,7 @@ export default function LegalOnboardingGate({ children }: LegalOnboardingGatePro
                       {trial.requires_payment
                         ? t('legalOnboarding.paidTrialPrice', {
                             price: trial.price_rubles,
-                            defaultValue: 'Активация — {{price}} ₽',
+                            defaultValue: 'Активация — {{price}}\u00A0₽',
                           })
                         : t('legalOnboarding.freeTrialPrice', 'Без оплаты и обязательств')}
                     </p>

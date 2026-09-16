@@ -28,3 +28,10 @@ export function BestValueBadge({
 
 /** Цвет рамки выделенного периода — тот же токен, что и у отметки. */
 export const BEST_VALUE_BORDER = 'rgb(var(--color-accent-400))';
+
+/** Keep the best-value outline visible when a highlighted option is selected. */
+export function bestValueFrame(selected: boolean): string {
+  return selected
+    ? 'border-2 border-accent-400/70 ring-2 ring-inset ring-accent-500'
+    : 'border-2 border-accent-400/70';
+}

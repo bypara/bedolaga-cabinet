@@ -2,6 +2,17 @@ import apiClient from './client';
 
 // Types
 export type BroadcastChannel = 'telegram' | 'email' | 'both';
+export type TelegramBroadcastSender = 'current' | 'legacy';
+
+export interface BroadcastDeliveryOptions {
+  legacy_available: boolean;
+  migration_button_available: boolean;
+  current_is_target: boolean;
+  migration_url: string;
+  migration_button_text: string;
+  bonus_enabled: boolean;
+  bonus_amount_rubles: number;
+}
 
 export interface BroadcastFilter {
   key: string;
@@ -63,6 +74,8 @@ export interface BroadcastMedia {
 }
 
 export interface BroadcastCreateRequest {
+  telegram_sender?: TelegramBroadcastSender;
+  add_migration_button?: boolean;
   target: string;
   message_text: string;
   selected_buttons: string[];
@@ -76,6 +89,8 @@ export interface EmailBroadcastCreateRequest {
 }
 
 export interface CombinedBroadcastCreateRequest {
+  telegram_sender?: TelegramBroadcastSender;
+  add_migration_button?: boolean;
   channel: BroadcastChannel;
   target: string;
   // Broadcast category for user notification preference filtering
@@ -91,6 +106,8 @@ export interface CombinedBroadcastCreateRequest {
 }
 
 export interface Broadcast {
+  telegram_sender?: TelegramBroadcastSender;
+  add_migration_button?: boolean;
   id: number;
   target_type: string;
   message_text: string;
@@ -143,6 +160,12 @@ export interface MediaUploadResponse {
 }
 
 export const adminBroadcastsApi = {
+  getDeliveryOptions: async (): Promise<BroadcastDeliveryOptions> => {
+    const response = await apiClient.get<BroadcastDeliveryOptions>(
+      '/cabinet/admin/broadcasts/delivery-options',
+    );
+    return response.data;
+  },
   // Get all available filters with counts (for Telegram)
   getFilters: async (): Promise<BroadcastFiltersResponse> => {
     const response = await apiClient.get<BroadcastFiltersResponse>(
@@ -254,12 +277,15 @@ export const adminBroadcastsApi = {
   uploadMedia: async (
     file: File,
     mediaType: 'photo' | 'video' | 'document',
+    telegramSender: TelegramBroadcastSender = 'current',
   ): Promise<MediaUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('media_type', mediaType);
 
-    const response = await apiClient.post<MediaUploadResponse>('/cabinet/media/upload', formData);
+    const response = await apiClient.post<MediaUploadResponse>('/cabinet/media/upload', formData, {
+      params: { telegram_sender: telegramSender },
+    });
     return response.data;
   },
 };

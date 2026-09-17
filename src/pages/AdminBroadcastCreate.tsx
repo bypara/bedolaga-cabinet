@@ -8,9 +8,11 @@ import {
   type TariffFilter,
   type CombinedBroadcastCreateRequest,
   type CustomBroadcastButton,
+  type TelegramBroadcastSender,
 } from '../api/adminBroadcasts';
 import { AdminBackButton } from '../components/admin';
 import { TelegramPreview, EmailPreview } from '../components/broadcasts/BroadcastPreview';
+import { useNativeDialog } from '../platform/hooks/useNativeDialog';
 import {
   BroadcastIcon,
   ChevronDownIcon,
@@ -40,6 +42,9 @@ export default function AdminBroadcastCreate() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { confirm: confirmDialog } = useNativeDialog();
+  const confirmingRef = useRef(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Channel toggles (both can be enabled)
@@ -57,6 +62,17 @@ export default function AdminBroadcastCreate() {
 
   // Telegram-specific state
   const [messageText, setMessageText] = useState('');
+  const [telegramSender, setTelegramSender] = useState<TelegramBroadcastSender>('current');
+  const [addMigrationButton, setAddMigrationButton] = useState(false);
+  const { data: deliveryOptions, isError: deliveryOptionsError } = useQuery({
+    queryKey: ['admin', 'broadcasts', 'delivery-options'],
+    queryFn: adminBroadcastsApi.getDeliveryOptions,
+    enabled: telegramEnabled,
+  });
+  const migrationButtonAllowed = Boolean(
+    deliveryOptions?.migration_button_available &&
+      (telegramSender === 'legacy' || !deliveryOptions.current_is_target),
+  );
   const [selectedButtons, setSelectedButtons] = useState<string[]>(['home']);
   const [customButtons, setCustomButtons] = useState<CustomBroadcastButton[]>([]);
   const [isAddingCustomButton, setIsAddingCustomButton] = useState(false);
@@ -121,8 +137,20 @@ export default function AdminBroadcastCreate() {
         },
       ]);
     }
+    if (addMigrationButton && migrationButtonAllowed && deliveryOptions) {
+      rows.push([
+        { text: deliveryOptions.migration_button_text, url: deliveryOptions.migration_url },
+      ]);
+    }
     return rows;
-  }, [selectedButtons, customButtons, t]);
+  }, [
+    selectedButtons,
+    customButtons,
+    t,
+    addMigrationButton,
+    migrationButtonAllowed,
+    deliveryOptions,
+  ]);
 
   // Fetch Telegram filters
   const { data: filtersData, isLoading: filtersLoading } = useQuery({
@@ -272,7 +300,7 @@ export default function AdminBroadcastCreate() {
 
     setIsUploading(true);
     try {
-      const result = await adminBroadcastsApi.uploadMedia(file, detectedType);
+      const result = await adminBroadcastsApi.uploadMedia(file, detectedType, telegramSender);
       setUploadedFileId(result.file_id);
     } catch {
       setMediaFile(null);
@@ -342,7 +370,12 @@ export default function AdminBroadcastCreate() {
   };
 
   // Validate form
-  const isTelegramValid = telegramEnabled && telegramTarget && messageText.trim().length > 0;
+  const isTelegramValid =
+    telegramEnabled &&
+    telegramTarget &&
+    messageText.trim().length > 0 &&
+    (telegramSender === 'current' || deliveryOptions?.legacy_available) &&
+    (!addMigrationButton || migrationButtonAllowed);
   const isEmailValid =
     emailEnabled && emailTarget && emailSubject.trim().length > 0 && emailContent.trim().length > 0;
 
@@ -357,12 +390,38 @@ export default function AdminBroadcastCreate() {
 
   // Submit
   const handleSubmit = async () => {
-    if (!isValid) return;
+    if (!isValid || confirmingRef.current || createMutation.isPending || isSubmitting) return;
+    if (telegramEnabled) {
+      confirmingRef.current = true;
+      setIsConfirming(true);
+      let confirmed = false;
+      try {
+        confirmed = await confirmDialog(
+          t('admin.broadcasts.confirmSender', {
+            defaultValue:
+              'Отправить рассылку? Отправитель: {{sender}}. Кнопка перехода: {{button}}.',
+            sender:
+              telegramSender === 'legacy'
+                ? t('admin.broadcasts.senderLegacy', 'Старый бот')
+                : t('admin.broadcasts.senderCurrent', 'Основной бот'),
+            button: addMigrationButton
+              ? t('admin.broadcasts.buttonEnabled', 'включена')
+              : t('admin.broadcasts.buttonDisabled', 'выключена'),
+          }),
+        );
+      } finally {
+        confirmingRef.current = false;
+        setIsConfirming(false);
+      }
+      if (!confirmed) return;
+    }
 
     // Single channel — use existing createMutation with navigation to detail
     if (telegramEnabled && !emailEnabled) {
       const data: CombinedBroadcastCreateRequest = {
         channel: 'telegram',
+        telegram_sender: telegramSender,
+        add_migration_button: addMigrationButton,
         target: telegramTarget,
         message_text: messageText,
         selected_buttons: selectedButtons,
@@ -393,6 +452,8 @@ export default function AdminBroadcastCreate() {
     try {
       const telegramData: CombinedBroadcastCreateRequest = {
         channel: 'telegram',
+        telegram_sender: telegramSender,
+        add_migration_button: addMigrationButton,
         target: telegramTarget,
         message_text: messageText,
         selected_buttons: selectedButtons,
@@ -430,7 +491,7 @@ export default function AdminBroadcastCreate() {
     ? (emailPreviewMutation.data?.count ?? selectedEmailFilter?.count ?? null)
     : null;
 
-  const isPending = createMutation.isPending || isSubmitting;
+  const isPending = createMutation.isPending || isSubmitting || isConfirming;
 
   // Render filter dropdown
   const renderFilterDropdown = (
@@ -604,6 +665,74 @@ export default function AdminBroadcastCreate() {
             >
               {t('admin.broadcasts.preview', 'Предпросмотр')}
             </button>
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-dark-700 bg-dark-800/50 p-4">
+            <label htmlFor="broadcast-sender" className="block text-sm font-medium text-dark-300">
+              {t('admin.broadcasts.sender', 'Отправить от бота')}
+            </label>
+            <select
+              id="broadcast-sender"
+              value={telegramSender}
+              disabled={Boolean(mediaFile) || isUploading}
+              onChange={(event) => {
+                setTelegramSender(event.target.value as TelegramBroadcastSender);
+                setAddMigrationButton(false);
+              }}
+              className="input w-full"
+            >
+              <option value="current">{t('admin.broadcasts.senderCurrent', 'Основной бот')}</option>
+              <option value="legacy" disabled={!deliveryOptions?.legacy_available}>
+                {t('admin.broadcasts.senderLegacy', 'Старый бот')}
+              </option>
+            </select>
+            {!deliveryOptions?.legacy_available && (
+              <p className="text-xs text-dark-400">
+                {deliveryOptionsError
+                  ? t(
+                      'admin.broadcasts.deliveryUnavailable',
+                      'Не удалось загрузить настройки отправки. Обновите страницу.',
+                    )
+                  : t(
+                      'admin.broadcasts.legacyTokenHint',
+                      'Отправка от старого бота появится после настройки его токена на сервере.',
+                    )}
+              </p>
+            )}
+            {mediaFile && (
+              <p className="text-xs text-dark-400">
+                {t(
+                  'admin.broadcasts.senderMediaHint',
+                  'Для смены бота сначала удалите вложение: файлы Telegram привязаны к отправителю.',
+                )}
+              </p>
+            )}
+            <label className="flex items-center gap-3 text-sm text-dark-200">
+              <input
+                type="checkbox"
+                checked={addMigrationButton}
+                disabled={!migrationButtonAllowed}
+                onChange={(event) => setAddMigrationButton(event.target.checked)}
+                className="h-4 w-4 accent-accent-500"
+              />
+              {t('admin.broadcasts.addMigrationButton', 'Добавить кнопку перехода в нового бота')}
+            </label>
+            <p className="text-xs text-dark-400">
+              {!migrationButtonAllowed
+                ? t(
+                    'admin.broadcasts.migrationButtonHint',
+                    'Нужна ссылка на нового бота в настройках переезда. От нового бота кнопку перехода отправить нельзя.',
+                  )
+                : deliveryOptions?.bonus_enabled
+                  ? t(
+                      'admin.broadcasts.migrationBonusHint',
+                      'Кнопка будет персональной. Бонус получат подходящие пользователи после запуска нового бота, один раз.',
+                    )
+                  : t(
+                      'admin.broadcasts.migrationNoBonusHint',
+                      'Кнопка откроет нового бота. Режим переезда включать не нужно.',
+                    )}
+            </p>
           </div>
 
           {/* Telegram filter selection */}
@@ -968,6 +1097,11 @@ export default function AdminBroadcastCreate() {
         mediaUrl={mediaPreview}
         mediaType={previewMediaTypeForModal}
         buttons={previewButtonRows}
+        senderLabel={
+          telegramSender === 'legacy'
+            ? t('admin.broadcasts.senderLegacy', 'Старый бот')
+            : t('admin.broadcasts.senderCurrent', 'Основной бот')
+        }
       />
       <EmailPreview
         open={showEmailPreview}

@@ -12,6 +12,7 @@ interface PreviewButton {
 }
 
 interface TelegramPreviewProps {
+  senderLabel?: string;
   open: boolean;
   onClose: () => void;
   text: string;
@@ -179,6 +180,7 @@ function tokensToReact(tokens: Token[]): ReactNode {
 }
 
 export function TelegramPreview({
+  senderLabel,
   open,
   onClose,
   text,
@@ -216,6 +218,7 @@ export function TelegramPreview({
             ✕
           </button>
         </div>
+        {senderLabel && <p className="mb-3 text-sm text-white/70">{senderLabel}</p>}
         <div className="rounded-xl bg-[#0e1621] p-3">
           <div className="ml-auto max-w-[90%] rounded-2xl rounded-tr-md bg-[#2b5278] p-3 text-white shadow">
             {mediaUrl && mediaType === 'photo' && (

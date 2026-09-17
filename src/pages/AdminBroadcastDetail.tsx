@@ -122,6 +122,15 @@ export default function AdminBroadcastDetail() {
               </h1>
               <BroadcastStatusBadge status={broadcast.status} />
               <ChannelBadge channel={broadcast.channel} />
+              {broadcast.channel !== 'email' && (
+                <span className="text-xs text-dark-400">
+                  {broadcast.telegram_sender === 'legacy'
+                    ? t('admin.broadcasts.senderLegacy', 'Старый бот')
+                    : t('admin.broadcasts.senderCurrent', 'Основной бот')}
+                  {broadcast.add_migration_button &&
+                    ` · ${t('admin.broadcasts.migrationButtonBadge', 'Кнопка перехода')}`}
+                </span>
+              )}
             </div>
             <p className="text-sm text-dark-400">
               {new Date(broadcast.created_at).toLocaleString()}

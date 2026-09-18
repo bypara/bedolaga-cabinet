@@ -53,11 +53,15 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 550,
       rollupOptions: {
         output: {
+          // Do not pull shared dependencies/CommonJS helpers into the first
+          // matching vendor chunk: that can make React depend on Radix, which
+          // evaluates forwardRef before React has been initialized.
+          onlyExplicitManualChunks: true,
           manualChunks(id) {
             if (!id.includes('node_modules')) return;
             if (
-              id.includes('react-dom') ||
-              id.includes('react-router') ||
+              id.includes('node_modules/react-dom/') ||
+              id.includes('node_modules/react-router/') ||
               id.includes('node_modules/react/')
             )
               return 'vendor-react';

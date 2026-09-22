@@ -929,6 +929,9 @@
       "paritypay": {
         "description": "Pay by card or via SBP (ParityPay)"
       },
+      "anore": {
+        "description": "Pay via Anore: SBP, YooMoney, or crypto"
+      },
       "donut": {
         "description": "Pay by card or SBP through Donut P2P"
       },
@@ -3108,6 +3111,7 @@
         "payments_cispay": "CisPay",
         "payments_tabpay": "TabPay",
         "payments_paritypay": "ParityPay",
+        "payments_anore": "Anore",
         "payments_donut": "Donut",
         "payments_lava": "Lava",
         "payments_apple_iap": "Apple IAP",

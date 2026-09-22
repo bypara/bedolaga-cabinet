@@ -957,6 +957,9 @@
       "paritypay": {
         "description": "Оплата картой или через СБП (ParityPay)"
       },
+      "anore": {
+        "description": "Оплата через Anore: СБП, ЮMoney или криптовалютой"
+      },
       "donut": {
         "description": "Оплата картой и СБП через Donut P2P"
       },
@@ -3154,6 +3157,7 @@
         "payments_cispay": "CisPay",
         "payments_tabpay": "TabPay",
         "payments_paritypay": "ParityPay",
+        "payments_anore": "Anore",
         "payments_donut": "Donut",
         "payments_lava": "Lava",
         "payments_apple_iap": "Apple IAP",

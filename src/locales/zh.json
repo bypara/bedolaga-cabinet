@@ -798,6 +798,9 @@
       "paritypay": {
         "description": "通过 ParityPay 使用银行卡或 SBP 支付"
       },
+      "anore": {
+        "description": "通过 Anore 使用 SBP、YooMoney 或加密货币支付"
+      },
       "donut": {
         "description": "通过 Donut P2P 使用银行卡或 SBP 支付"
       },
@@ -2190,6 +2193,7 @@
         "payments_cispay": "CisPay",
         "payments_tabpay": "TabPay",
         "payments_paritypay": "ParityPay",
+        "payments_anore": "Anore",
         "payments_donut": "Donut",
         "payments_lava": "Lava",
         "payments_apple_iap": "Apple IAP",

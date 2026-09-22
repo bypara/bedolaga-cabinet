@@ -804,6 +804,9 @@
       "paritypay": {
         "description": "پرداخت با کارت یا SBP از طریق ParityPay"
       },
+      "anore": {
+        "description": "پرداخت از طریق Anore"
+      },
       "donut": {
         "description": "پرداخت با کارت یا SBP از طریق Donut P2P"
       },
@@ -2129,6 +2132,7 @@
         "payments_cispay": "CisPay",
         "payments_tabpay": "TabPay",
         "payments_paritypay": "ParityPay",
+        "payments_anore": "Anore",
         "payments_donut": "Donut",
         "payments_lava": "Lava",
         "payments_apple_iap": "Apple IAP",
